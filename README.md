@@ -169,3 +169,4 @@ EOF
 References:
 
 - [What version of the Kubernetes API is included with each OpenShift 4.x release? - Red Hat Customer Portal](https://access.redhat.com/solutions/4870701)
+1
