@@ -63,7 +63,7 @@ jobs:
           export OS=$(uname | awk '{print tolower($0)}')
 
           # Opm
-          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-registry/releases/download/v1.30.0
+          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-registry/releases/download/v1.45.0
           curl -LO ${OPERATOR_SDK_DL_URL}/${OS}-${ARCH}-opm
           chmod +x ${OS}-${ARCH}-opm && sudo mv ${OS}-${ARCH}-opm /usr/local/bin/opm
 

@@ -19,14 +19,14 @@ if ! command -v operator-sdk >/dev/null 2>&1; then
   exit 1
 fi
 
-install_operator() {
+run_bundle() {
   kubectl auth can-i create namespace --all-namespaces
   kubectl create namespace ${NAMESPACE} || true
-  operator-sdk run bundle "${OPERATOR_BUNDLE_IMAGE}" --namespace "${NAMESPACE}" --timeout "${TIMEOUT}" || (kubectl events --namespace "${NAMESPACE}" -o yaml && exit 1)
+  operator-sdk run bundle "${OPERATOR_BUNDLE_IMAGE}" --namespace "${NAMESPACE}" --timeout "${TIMEOUT}" || (kubectl get Subscription --namespace "${NAMESPACE}" -o yaml && exit 1)
 
   # If on MacOS, need to install `brew install coreutils` to get `timeout`
-  timeout 600s bash -c 'until kubectl get customresourcedefinitions.apiextensions.k8s.io trustifies.org.trustify; do sleep 30; done' \
-  || kubectl get subscription --namespace ${NAMESPACE} -o yaml trustify-operator # Print subscription details when timed out
+  timeout 600s bash -c 'until kubectl get customresourcedefinitions.apiextensions.k8s.io tackles.tackle.konveyor.io; do sleep 30; done' \
+  || kubectl get subscription --namespace ${NAMESPACE} -o yaml konveyor-operator # Print subscription details when timed out
   kubectl get clusterserviceversions.operators.coreos.com -n "${NAMESPACE}" -o yaml
 }
 
@@ -83,10 +83,10 @@ EOF
   kubectl get deployments.apps -n "${NAMESPACE}" -o yaml
 }
 
-kubectl get customresourcedefinitions.apiextensions.k8s.io clusterserviceversions.operators.coreos.com || operator-sdk olm install
+kubectl get customresourcedefinitions.apiextensions.k8s.io clusterserviceversions.operators.coreos.com || operator-sdk olm install --version v0.25.0
 olm_namespace=$(kubectl get clusterserviceversions.operators.coreos.com --all-namespaces | grep packageserver | awk '{print $1}')
 kubectl rollout status -w deployment/olm-operator --namespace="${olm_namespace}"
 kubectl rollout status -w deployment/catalog-operator --namespace="${olm_namespace}"
 kubectl wait --namespace "${olm_namespace}" --for='jsonpath={.status.phase}'=Succeeded clusterserviceversions.operators.coreos.com packageserver
-kubectl get customresourcedefinitions.apiextensions.k8s.io org.trustify || install_operator
-install_trustify
+kubectl get customresourcedefinitions.apiextensions.k8s.io org.trustify || run_bundle
+
