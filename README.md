@@ -120,6 +120,7 @@ metadata:
   namespace: trustify
 spec:
   channel: alpha
+  installPlanApproval: Automatic
   name: trustify-operator
   source: trustify-catalog-source
   sourceNamespace: ${CATALOG_NAMESPACE}
