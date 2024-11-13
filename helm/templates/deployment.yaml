@@ -4,7 +4,7 @@ kind: "Deployment"
 metadata:
   annotations:
     app.quarkus.io/quarkus-version: "3.15.1"
-    app.quarkus.io/vcs-uri: "https://github.com/trustification/trustify-operator.git"
+    app.quarkus.io/vcs-uri: "https://github.com/carlosthe19916/trustify-operator.git"
     prometheus.io/scrape: "true"
     prometheus.io/path: "/q/metrics"
     prometheus.io/port: "8080"
@@ -22,7 +22,7 @@ spec:
     metadata:
       annotations:
         app.quarkus.io/quarkus-version: "3.15.1"
-        app.quarkus.io/vcs-uri: "https://github.com/trustification/trustify-operator.git"
+        app.quarkus.io/vcs-uri: "https://github.com/carlosthe19916/trustify-operator.git"
         prometheus.io/scrape: "true"
         prometheus.io/path: "/q/metrics"
         prometheus.io/port: "8080"
