@@ -12,7 +12,6 @@ spec:
       targetPort: 8080
   selector:
     app: keycloak
-  type: LoadBalancer
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,6 +55,9 @@ metadata:
 spec:
   template:
     spec:
+      volumes:
+        - name: workspace
+          emptyDir: { }
       initContainers:
         - name: wait
           image: docker.io/alpine/curl:latest
@@ -86,7 +88,9 @@ spec:
               done
               
               echo "Server ready to listen"
-
+          volumeMounts:
+            - name: workspace
+              mountPath: .keycloak/
       containers:
         - name: config
           image: quay.io/keycloak/keycloak:26.0.6
@@ -128,5 +132,8 @@ spec:
                 "clientId": "backend"
               }
               EOF
+          volumeMounts:
+            - name: workspace
+              mountPath: .keycloak/
       restartPolicy: Never
   backoffLimit: 1

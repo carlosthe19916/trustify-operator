@@ -1,4 +1,4 @@
-package org.trustify.operator.utils;
+package org.trustify.operator;
 
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -7,15 +7,16 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.quarkus.logging.Log;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
+import org.trustify.operator.utils.CRDUtils;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
-public class HostnameUtils {
+public class HostUtils {
 
     public static boolean isOpenshift(KubernetesClient k8sClient) {
-        return k8sClient.supports("route.openshift.io", "routes");
+        return k8sClient.supports("route.openshift.io/v1", "Route");
     }
 
     public static Optional<String> getHostnameForIngress(Trustify cr, KubernetesClient k8sClient) {

@@ -7,9 +7,9 @@ related:
     pull-policy: Always
 keycloak-operator:
   subscription:
-    namespace: olm
-    source: operatorhubio-catalog
-    channel: fast
+    namespace: ${KEYCLOAK_SUBSCRIPTION_NAMESPACE}
+    source: ${KEYCLOAK_SUBSCRIPTION_SOURCE}
+    channel: ${KEYCLOAK_SUBSCRIPTION_CHANNEL}
 
 # Quarkus config
 quarkus:

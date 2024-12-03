@@ -16,7 +16,7 @@ import org.trustify.operator.cdrs.v2alpha1.keycloak.crds.v2alpha1.deployment.spe
 import org.trustify.operator.cdrs.v2alpha1.keycloak.crds.v2alpha1.deployment.spec.HostnameSpec;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.crds.v2alpha1.deployment.spec.HttpSpec;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.crds.v2alpha1.deployment.spec.IngressSpec;
-import org.trustify.operator.utils.HostnameUtils;
+import org.trustify.operator.HostUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -65,7 +65,7 @@ public class KeycloakServerService {
         spec.getIngressSpec().setIngressEnabled(false);
 
         // Hostname
-        String hostname = HostnameUtils.getHostnameForKeycloak(cr, k8sClient)
+        String hostname = HostUtils.getHostnameForKeycloak(cr, k8sClient)
                 .orElseThrow(() -> new IllegalStateException("Could not find hostname for setting up Keycloak"));
 
         spec.setHostnameSpec(new HostnameSpec());

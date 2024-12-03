@@ -15,7 +15,7 @@ import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.utils.CRDUtils;
-import org.trustify.operator.utils.HostnameUtils;
+import org.trustify.operator.HostUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -42,7 +42,7 @@ public class UIIngress extends CRUDKubernetesDependentResource<Ingress, Trustify
 
         var port = UIService.getServicePort(cr);
 
-        String hostname = HostnameUtils.getHostnameForIngress(cr, k8sClient).orElse(null);
+        String hostname = HostUtils.getHostnameForIngress(cr, k8sClient).orElse(null);
         IngressTLS ingressTLS = getIngressTLS(cr);
         List<IngressTLS> ingressTLSList = ingressTLS != null ? Collections.singletonList(ingressTLS) : Collections.emptyList();
 

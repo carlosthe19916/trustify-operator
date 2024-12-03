@@ -3,15 +3,17 @@ package org.trustify.operator;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithName;
 
+import java.util.Optional;
+
 @ConfigMapping(prefix = "keycloak-operator.subscription")
 public interface KeycloakSubscriptionConfig {
 
     @WithName("namespace")
-    String namespace();
+    Optional<String> namespace();
 
     @WithName("source")
-    String source();
+    Optional<String> source();
 
     @WithName("channel")
-    String channel();
+    Optional<String> channel();
 }
