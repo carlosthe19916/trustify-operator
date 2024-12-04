@@ -135,7 +135,9 @@ public record TrustifySpec(
             @JsonPropertyDescription("Oidc client id for the UI.")
             String uiClientId,
             @JsonPropertyDescription("Oidc client id for the Server.")
-            String serverClientId
+            String serverClientId,
+            @JsonPropertyDescription("Oidc certificate. The reference to a secret holding Certificate.")
+            SecretKeySelector tlsCaCertificateSecret
     ) {
     }
 

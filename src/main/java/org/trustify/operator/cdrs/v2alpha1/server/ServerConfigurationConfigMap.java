@@ -13,13 +13,10 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.services.KeycloakRealmService;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.utils.KeycloakUtils;
-import org.trustify.operator.cdrs.v2alpha1.server.templates.ConfigurationTemplate;
+import org.trustify.operator.cdrs.v2alpha1.server.templates.AuthTemplate;
 import org.trustify.operator.utils.CRDUtils;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 @KubernetesDependent(labelSelector = ServerConfigurationConfigMap.LABEL_SELECTOR, resourceDiscriminator = ServerConfigurationConfigMapDiscriminator.class)
@@ -42,9 +39,6 @@ public class ServerConfigurationConfigMap extends CRUDKubernetesDependentResourc
 
     @SuppressWarnings("unchecked")
     private ConfigMap newConfigMap(Trustify cr, Context<Trustify> context) {
-//        UIIngressService ingressService = context.managedDependentResourceContext()
-//                .getMandatory(Constants.CONTEXT_INGRESS_SERVICE_KEY, UIIngressService.class);
-
         AtomicReference<String> yamlFile = new AtomicReference<>();
 
         Optional.ofNullable(cr.getSpec().oidcSpec())
@@ -54,33 +48,37 @@ public class ServerConfigurationConfigMap extends CRUDKubernetesDependentResourc
                         switch (providerType) {
                             case EXTERNAL -> {
                                 if (oidcSpec.externalOidcSpec() != null) {
-                                    ConfigurationTemplate.Data data = new ConfigurationTemplate.Data(List.of(
-                                            new ConfigurationTemplate.Client(
+                                    AuthTemplate.Data data = new AuthTemplate.Data(List.of(
+                                            new AuthTemplate.Client(
                                                     oidcSpec.externalOidcSpec().serverUrl(),
-                                                    oidcSpec.externalOidcSpec().uiClientId()
+                                                    oidcSpec.externalOidcSpec().uiClientId(),
+                                                    Collections.emptyList()
                                             ),
-                                            new ConfigurationTemplate.Client(
+                                            new AuthTemplate.Client(
                                                     oidcSpec.externalOidcSpec().serverUrl(),
-                                                    oidcSpec.externalOidcSpec().serverClientId()
+                                                    oidcSpec.externalOidcSpec().serverClientId(),
+                                                    Collections.emptyList()
                                             )
                                     ));
-                                    yamlFile.set(ConfigurationTemplate.configuration(data).render());
+                                    yamlFile.set(AuthTemplate.auth(data).render());
                                 } else {
                                     logger.error("Oidc provider type is EXTERNAL but no config for external oidc was provided");
                                 }
                             }
                             case EMBEDDED -> {
-                                ConfigurationTemplate.Data data = new ConfigurationTemplate.Data(List.of(
-                                        new ConfigurationTemplate.Client(
+                                AuthTemplate.Data data = new AuthTemplate.Data(List.of(
+                                        new AuthTemplate.Client(
                                                 KeycloakUtils.serverUrlWithRealmIncluded(cr),
-                                                KeycloakRealmService.getUIClientName(cr)
+                                                KeycloakRealmService.getUIClientName(cr),
+                                                Collections.singletonList(getConfigMapOidcTlsExpectedPath())
                                         ),
-                                        new ConfigurationTemplate.Client(
+                                        new AuthTemplate.Client(
                                                 KeycloakUtils.serverUrlWithRealmIncluded(cr),
-                                                KeycloakRealmService.getBackendClientName(cr)
+                                                KeycloakRealmService.getBackendClientName(cr),
+                                                Collections.singletonList(getConfigMapOidcTlsExpectedPath())
                                         )
                                 ));
-                                yamlFile.set(ConfigurationTemplate.configuration(data).render());
+                                yamlFile.set(AuthTemplate.auth(data).render());
                             }
                         }
                     }
@@ -121,4 +119,7 @@ public class ServerConfigurationConfigMap extends CRUDKubernetesDependentResourc
         return "auth.yaml";
     }
 
+    public static String getConfigMapOidcTlsExpectedPath() {
+        return "/etc/trust-anchor/tls.crt";
+    }
 }

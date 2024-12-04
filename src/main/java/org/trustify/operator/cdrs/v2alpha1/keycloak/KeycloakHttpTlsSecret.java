@@ -99,8 +99,8 @@ public class KeycloakHttpTlsSecret extends CRUDKubernetesDependentResource<Secre
                     .withOwnerReferences(CRDUtils.getOwnerReference(cr))
                     .endMetadata()
                     .withType("kubernetes.io/tls")
-                    .addToStringData("tls.key", KeycloakUtils.getPrivateKeyPkcs1Pem(keyPair))
-                    .addToStringData("tls.crt", KeycloakUtils.getCertificatePem(certHolder))
+                    .addToStringData(getSecretKeyFieldName(), KeycloakUtils.getPrivateKeyPkcs1Pem(keyPair))
+                    .addToStringData(getSecretCrtFieldName(), KeycloakUtils.getCertificatePem(certHolder))
                     .build();
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -112,4 +112,11 @@ public class KeycloakHttpTlsSecret extends CRUDKubernetesDependentResource<Secre
         return cr.getMetadata().getName() + "-" + Constants.KEYCLOAK_NAME + "-tls";
     }
 
+    public static String getSecretKeyFieldName() {
+        return "tls.key";
+    }
+
+    public static String getSecretCrtFieldName() {
+        return "tls.crt";
+    }
 }

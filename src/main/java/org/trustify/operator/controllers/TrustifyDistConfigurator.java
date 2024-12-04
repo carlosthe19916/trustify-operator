@@ -8,6 +8,7 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.db.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.db.DBService;
+import org.trustify.operator.cdrs.v2alpha1.keycloak.KeycloakHttpTlsSecret;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.services.KeycloakRealmService;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.services.KeycloakServerService;
 import org.trustify.operator.cdrs.v2alpha1.server.ServerConfigurationConfigMap;
@@ -204,28 +205,26 @@ public class TrustifyDistConfigurator {
         Optional.ofNullable(cr.getSpec().oidcSpec())
                 .ifPresentOrElse((oidcSpec) -> {
                     if (oidcSpec.enabled()) {
-//                        // Ingress TLS
-//                        var ingressTlsMountPath = "/etc/config/ingress-tls.ctr";
-//                        var ingressTlsVolume = new VolumeBuilder()
-//                                .withName("ingress-tls-pvol")
-//                                .withConfigMap(new ConfigMapVolumeSourceBuilder()
-//                                        .withName(CommonConfigMap.getConfigMapName(cr))
-//                                        .withDefaultMode(420)
-//                                        .build()
-//                                )
-//                                .build();
-//                        var ingressTlsVolumeMount = new VolumeMountBuilder()
-//                                .withName(ingressTlsVolume.getName())
-//                                .withMountPath(ingressTlsMountPath)
-//                                .withSubPath(CommonConfigMap.getConfigMapClusterTlsKey(cr))
-//                                .build();
-//                        config.allVolumes.add(ingressTlsVolume);
-//                        config.allVolumeMounts.add(ingressTlsVolumeMount);
-
                         // Volumes
-                        var configurationMountPath = "/etc/config/configuration.yaml";
+                        var oidcTlsCertVolume = new VolumeBuilder()
+                                .withName("trust-anchor")
+                                .withSecret(new SecretVolumeSourceBuilder()
+                                        .withSecretName(KeycloakHttpTlsSecret.getSecretName(cr))
+                                        .build()
+                                )
+                                .build();
+                        var oidcTlsCertVolumeMount = new VolumeMountBuilder()
+                                .withName(oidcTlsCertVolume.getName())
+                                .withMountPath(ServerConfigurationConfigMap.getConfigMapOidcTlsExpectedPath())
+                                .withSubPath(KeycloakHttpTlsSecret.getSecretCrtFieldName())
+                                .withReadOnly(true)
+                                .build();
+                        config.allVolumes.add(oidcTlsCertVolume);
+                        config.allVolumeMounts.add(oidcTlsCertVolumeMount);
+
+                        var authMountPath = "/etc/config/auth.yaml";
                         var configurationVolume = new VolumeBuilder()
-                                .withName("authentication-configuration-pvol")
+                                .withName("config-auth")
                                 .withConfigMap(new ConfigMapVolumeSourceBuilder()
                                         .withName(ServerConfigurationConfigMap.getConfigMapName(cr))
                                         .withDefaultMode(420)
@@ -234,8 +233,9 @@ public class TrustifyDistConfigurator {
                                 .build();
                         var configurationVolumeMount = new VolumeMountBuilder()
                                 .withName(configurationVolume.getName())
-                                .withMountPath(configurationMountPath)
+                                .withMountPath(authMountPath)
                                 .withSubPath(ServerConfigurationConfigMap.getConfigMapAuthKey(cr))
+                                .withReadOnly(true)
                                 .build();
                         config.allVolumes.add(configurationVolume);
                         config.allVolumeMounts.add(configurationVolumeMount);
@@ -245,50 +245,29 @@ public class TrustifyDistConfigurator {
 
                         List<EnvVar> envVars;
                         switch (providerType) {
-                            case EXTERNAL -> {
-                                envVars = Optional.ofNullable(oidcSpec.externalOidcSpec())
-                                        .map(externalOidcSpec -> optionMapper(externalOidcSpec)
-//                                                .mapOption("AUTHENTICATOR_OIDC_ISSUER_URL", TrustifySpec.ExternalOidcSpec::serverUrl)
-//                                                .mapOption("AUTHENTICATOR_OIDC_CLIENT_IDS", TrustifySpec.ExternalOidcSpec::serverClientId)
-                                                        .mapOption("UI_ISSUER_URL", TrustifySpec.ExternalOidcSpec::serverUrl)
-                                                        .mapOption("UI_CLIENT_ID", TrustifySpec.ExternalOidcSpec::uiClientId)
-                                                        .getEnvVars()
-                                        )
-                                        .orElseGet(ArrayList::new);
-                            }
-                            case EMBEDDED -> {
-//                                uiIngressService.getCurrentIngressURL(cr)
-//                                        .ifPresentOrElse(ingressUrl -> config.allEnvVars.add(new EnvVarBuilder()
-//                                                .withName("AUTHENTICATOR_OIDC_ISSUER_URL")
-//                                                .withValue(KeycloakUtils.serverUrlWithRealmIncluded(ingressUrl, cr))
-//                                                .build()
-//                                        ), () -> config.allEnvVars.add(new EnvVarBuilder()
-//                                                .withName("AUTHENTICATOR_OIDC_ISSUER_URL")
-//                                                .withValue(KeycloakUtils.serverUrlWithRealmIncluded(cr))
-//                                                .build()
-//                                        ));
-
-                                envVars = List.of(
-//                                        new EnvVarBuilder()
-//                                                .withName("AUTHENTICATOR_OIDC_CLIENT_IDS")
-//                                                .withValue(KeycloakRealmService.getUIClientName(cr))
-//                                                .build(),
-                                        new EnvVarBuilder()
-                                                .withName("UI_ISSUER_URL")
-                                                .withValue(KeycloakServerService.getServiceHostUrl(cr))
-                                                .build(),
-                                        new EnvVarBuilder()
-                                                .withName("UI_CLIENT_ID")
-                                                .withValue(KeycloakRealmService.getUIClientName(cr))
-                                                .build()
-                                );
-                            }
+                            case EXTERNAL -> envVars = Optional.ofNullable(oidcSpec.externalOidcSpec())
+                                    .map(externalOidcSpec -> optionMapper(externalOidcSpec)
+                                            .mapOption("UI_ISSUER_URL", TrustifySpec.ExternalOidcSpec::serverUrl)
+                                            .mapOption("UI_CLIENT_ID", TrustifySpec.ExternalOidcSpec::uiClientId)
+                                            .getEnvVars()
+                                    )
+                                    .orElseGet(ArrayList::new);
+                            case EMBEDDED -> envVars = List.of(
+                                    new EnvVarBuilder()
+                                            .withName("UI_ISSUER_URL")
+                                            .withValue(KeycloakServerService.getServiceHostUrl(cr))
+                                            .build(),
+                                    new EnvVarBuilder()
+                                            .withName("UI_CLIENT_ID")
+                                            .withValue(KeycloakRealmService.getUIClientName(cr))
+                                            .build()
+                            );
                             default -> envVars = Collections.emptyList();
                         }
 
                         config.allEnvVars.add(new EnvVarBuilder()
                                 .withName("AUTH_CONFIGURATION")
-                                .withValue(configurationMountPath)
+                                .withValue(authMountPath)
                                 .build()
                         );
                         config.allEnvVars.add(new EnvVarBuilder()

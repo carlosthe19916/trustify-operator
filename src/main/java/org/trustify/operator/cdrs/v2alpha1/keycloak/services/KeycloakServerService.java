@@ -57,7 +57,6 @@ public class KeycloakServerService {
         // Https
         spec.setHttpSpec(new HttpSpec());
         HttpSpec httpSpec = spec.getHttpSpec();
-        httpSpec.setHttpEnabled(true);
         httpSpec.setTlsSecret(KeycloakHttpTlsSecret.getSecretName(cr));
 
         // Ingress
@@ -69,7 +68,7 @@ public class KeycloakServerService {
                 .orElseThrow(() -> new IllegalStateException("Could not find hostname for setting up Keycloak"));
 
         spec.setHostnameSpec(new HostnameSpec());
-        spec.getHostnameSpec().setHostname("http://" + hostname + RELATIVE_PATH);
+        spec.getHostnameSpec().setHostname("https://" + hostname + RELATIVE_PATH);
         spec.getHostnameSpec().setBackchannelDynamic(true);
 
         // Additional options
@@ -103,10 +102,10 @@ public class KeycloakServerService {
     }
 
     public static String getServiceHostWithPort(Trustify cr) {
-        return String.format("%s:%s", getServiceHost(cr), 8080);
+        return String.format("%s:%s", getServiceHost(cr), 8443);
     }
 
     public static String getServiceHostUrl(Trustify cr) {
-        return String.format("%s://%s", "http", getServiceHostWithPort(cr));
+        return String.format("%s://%s", "https", getServiceHostWithPort(cr));
     }
 }

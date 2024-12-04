@@ -145,6 +145,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                                 "db",
                                                 "migrate"
                                         )
+                                        .withVolumeMounts(volumeMounts)
                                         .build()
                                 )
                                 .withContainers(new ContainerBuilder()

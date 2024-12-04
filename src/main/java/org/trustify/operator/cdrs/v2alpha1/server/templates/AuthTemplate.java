@@ -6,9 +6,9 @@ import io.quarkus.qute.TemplateInstance;
 import java.util.List;
 
 @CheckedTemplate
-public class ConfigurationTemplate {
+public class AuthTemplate {
 
-    public record Client(String serverUrl, String clientId) {
+    public record Client(String serverUrl, String clientId, List<String> tlsCaCertificatePaths) {
     }
 
     public record Data(List<Client> clients) {
@@ -20,6 +20,6 @@ public class ConfigurationTemplate {
      * @param data Should Match the fields in the template file
      * @return a Template instance
      */
-    public static native TemplateInstance configuration(Data data);
+    public static native TemplateInstance auth(Data data);
 
 }

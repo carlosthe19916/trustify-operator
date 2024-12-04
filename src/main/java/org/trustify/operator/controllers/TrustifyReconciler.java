@@ -16,8 +16,6 @@ import org.jboss.logging.Logger;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifyStatusCondition;
-import org.trustify.operator.cdrs.v2alpha1.common.CommonConfigMap;
-import org.trustify.operator.cdrs.v2alpha1.common.CommonConfigMapActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.db.*;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.*;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.crds.v2alpha1.deployment.Keycloak;
@@ -43,12 +41,6 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
         namespaces = WATCH_CURRENT_NAMESPACE,
         name = "trustify",
         dependents = {
-                @Dependent(
-                        name = "common-configmap",
-                        type = CommonConfigMap.class,
-                        activationCondition = CommonConfigMapActivationCondition.class
-                ),
-
                 @Dependent(
                         name = "keycloak-tls-secret",
                         type = KeycloakHttpTlsSecret.class,

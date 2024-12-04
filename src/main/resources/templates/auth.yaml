@@ -1,9 +1,11 @@
 authentication:
   clients:
-    {#each data.clients}
-    - issuerUrl: {it.serverUrl}
-      clientId: {it.clientId}
-      {#if it_index == 0 }
+    {#for client in data.clients}
+    - issuerUrl: {client.serverUrl}
+      clientId: {client.clientId}
+
+      # Scope Mappings
+      {#if client_index == 0 }
       scopeMappings: &ScopeMappings
         "create:document": [ "create.advisory", "create.importer", "create.metadata", "create.sbom", "create.weakness", "upload.dataset" ]
         "read:document": [ "ai", "read.advisory", "read.importer", "read.metadata", "read.sbom", "read.weakness" ]
@@ -12,4 +14,13 @@ authentication:
       {#else}
       scopeMappings: *ScopeMappings
       {/if}
-    {/each}
+
+      # TLS Certificates for OIDC
+      {#if client.tlsCaCertificatePaths }
+      tlsCaCertificate:
+        {#for path in client.tlsCaCertificatePaths}
+        - {path}
+        {/for}
+      {/if}
+      tlsInsecure: true
+    {/for}
