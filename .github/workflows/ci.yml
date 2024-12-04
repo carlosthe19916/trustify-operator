@@ -74,7 +74,7 @@ jobs:
           df -h
       - name: Download crc
         run: |
-          wget https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/crc/2.40.0/crc-linux-amd64.tar.xz
+          wget https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/crc/2.44.0/crc-linux-amd64.tar.xz
           mkdir -p bin/ && tar -xJf crc-linux-amd64.tar.xz --strip-components=1 -C bin/
           sudo mv ./bin/crc /usr/local/bin/crc && rm -r bin/
       - name: Set the crc config
@@ -82,6 +82,9 @@ jobs:
           crc config set consent-telemetry no
           crc config set network-mode user
           crc config set preset ${{ matrix.preset }}
+          
+          echo '{"auths":{"fake":{"auth": "Zm9vOmJhcgo="}}}' >> pull-secret.txt
+          crc config set pull-secret-file pull-secret.txt
       - name: Setup the crc
         run: sudo -su $USER crc setup
       - name: Start the crc
