@@ -10,8 +10,8 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.trustify.operator.Config;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
@@ -34,7 +34,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=db";
 
     @Inject
-    Config config;
+    TrustifyImagesConfig trustifyImagesConfig;
 
     public DBDeployment() {
         super(Deployment.class);
@@ -73,7 +73,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 .withName(getDeploymentName(cr))
                 .withNamespace(cr.getMetadata().getNamespace())
                 .withLabels(contextLabels)
-                .addToLabels("component", "db")
+                .addToLabels(CRDUtils.getLabelsFromString(LABEL_SELECTOR))
                 .addToLabels(Map.of(
                         "app.openshift.io/runtime", "postgresql"
                 ))
@@ -89,8 +89,8 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
 
         Map<String, String> selectorLabels = Constants.DB_SELECTOR_LABELS;
-        String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(config.dbImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(config.imagePullPolicy());
+        String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(trustifyImagesConfig.dbImage());
+        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
         TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(cr.getSpec().databaseSpec(), TrustifySpec.DatabaseSpec::resourceLimits)
                 .orElse(null);

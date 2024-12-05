@@ -10,8 +10,8 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.trustify.operator.Config;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
@@ -32,7 +32,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=server";
 
     @Inject
-    Config config;
+    TrustifyImagesConfig trustifyImagesConfig;
 
     public ServerDeployment() {
         super(Deployment.class);
@@ -98,8 +98,8 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
 
         Map<String, String> selectorLabels = Constants.SERVER_SELECTOR_LABELS;
-        String image = Optional.ofNullable(cr.getSpec().serverImage()).orElse(config.serverImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(config.imagePullPolicy());
+        String image = Optional.ofNullable(cr.getSpec().serverImage()).orElse(trustifyImagesConfig.serverImage());
+        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
         List<EnvVar> envVars = distConfigurator.getAllEnvVars();
         List<Volume> volumes = distConfigurator.getAllVolumes();

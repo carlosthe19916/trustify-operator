@@ -33,10 +33,9 @@ quarkus:
       generate-service-monitor: "false"
     env:
       vars:
-        related-image-trustify-ui: ${related.image.ui}
-        related-image-trustify-server: ${related.image.server}
+        related-image-ui: ${related.image.ui}
+        related-image-server: ${related.image.server}
         related-image-db: ${related.image.db}
-        related-image-importer: ${related.image.importer}
     resources:
       requests:
         memory: 64Mi

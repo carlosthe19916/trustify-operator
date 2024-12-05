@@ -10,8 +10,8 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.trustify.operator.Config;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
@@ -33,7 +33,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=ui";
 
     @Inject
-    Config config;
+    TrustifyImagesConfig trustifyImagesConfig;
 
     public UIDeployment() {
         super(Deployment.class);
@@ -101,8 +101,8 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
 
         Map<String, String> selectorLabels = Constants.UI_SELECTOR_LABELS;
-        String image = Optional.ofNullable(cr.getSpec().uiImage()).orElse(config.uiImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(config.imagePullPolicy());
+        String image = Optional.ofNullable(cr.getSpec().uiImage()).orElse(trustifyImagesConfig.uiImage());
+        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
         TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(cr.getSpec(), TrustifySpec::uiResourceLimitSpec)
                 .orElse(null);

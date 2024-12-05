@@ -40,7 +40,7 @@ public class DBService extends CRUDKubernetesDependentResource<Service, Trustify
                 .withName(getServiceName(cr))
                 .withNamespace(cr.getMetadata().getNamespace())
                 .withLabels(labels)
-                .addToLabels("component", "db")
+                .addToLabels(CRDUtils.getLabelsFromString(LABEL_SELECTOR))
                 .withOwnerReferences(CRDUtils.getOwnerReference(cr))
                 .endMetadata()
                 .withSpec(getServiceSpec(cr))

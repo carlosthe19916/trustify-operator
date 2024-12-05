@@ -28,10 +28,7 @@ public class AppIngress extends AppIngressBase {
                 cr,
                 context,
                 getIngressName(cr),
-                Map.of(
-                        "component", "ui",
-                        "component-variant", "https"
-                ),
+                CRDUtils.getLabelsFromString(LABEL_SELECTOR),
                 Collections.emptyMap()
         );
     }

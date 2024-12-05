@@ -48,7 +48,7 @@ public class DBPersistentVolumeClaim extends CRUDKubernetesDependentResource<Per
                 .withName(getPersistentVolumeClaimName(cr))
                 .withNamespace(cr.getMetadata().getNamespace())
                 .withLabels(labels)
-                .addToLabels("component", "db")
+                .addToLabels(CRDUtils.getLabelsFromString(LABEL_SELECTOR))
                 .withOwnerReferences(CRDUtils.getOwnerReference(cr))
                 .endMetadata()
                 .withSpec(new PersistentVolumeClaimSpecBuilder()

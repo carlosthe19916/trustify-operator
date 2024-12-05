@@ -46,7 +46,7 @@ public class DBSecret extends CRUDKubernetesDependentResource<Secret, Trustify> 
                 .withName(getSecretName(cr))
                 .withNamespace(cr.getMetadata().getNamespace())
                 .withLabels(labels)
-                .addToLabels("component", "db")
+                .addToLabels(CRDUtils.getLabelsFromString(LABEL_SELECTOR))
                 .withOwnerReferences(CRDUtils.getOwnerReference(cr))
                 .endMetadata()
                 .addToStringData(Constants.DB_SECRET_USERNAME, generateRandomString(10))
