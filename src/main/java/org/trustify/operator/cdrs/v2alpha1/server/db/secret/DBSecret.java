@@ -10,9 +10,7 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.utils.CRDUtils;
 
-import java.util.Map;
 import java.util.Random;
 
 @KubernetesDependent(labelSelector = DBSecret.LABEL_SELECTOR, resourceDiscriminator = DBSecretDiscriminator.class)
@@ -36,19 +34,12 @@ public class DBSecret extends CRUDKubernetesDependentResource<Secret, Trustify> 
         return Matcher.Result.nonComputed(actual.getMetadata().getName().equals(desiredSecretName));
     }
 
-    @SuppressWarnings("unchecked")
     private Secret newSecret(Trustify cr, Context<Trustify> context) {
-        final var labels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
         return new SecretBuilder()
-                .withNewMetadata()
-                .withName(getSecretName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(labels)
-                .addToLabels(CRDUtils.getLabelsFromString(LABEL_SELECTOR))
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getSecretName(cr), LABEL_SELECTOR, cr))
+                        .build()
+                )
                 .addToStringData(Constants.DB_SECRET_USERNAME, generateRandomString(10))
                 .addToStringData(Constants.DB_SECRET_PASSWORD, generateRandomString(10))
                 .build();

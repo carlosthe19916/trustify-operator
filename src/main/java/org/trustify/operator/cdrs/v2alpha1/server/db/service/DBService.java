@@ -11,9 +11,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
-import org.trustify.operator.utils.CRDUtils;
-
-import java.util.Map;
 
 @KubernetesDependent(labelSelector = DBService.LABEL_SELECTOR, resourceDiscriminator = DBServiceDiscriminator.class)
 @ApplicationScoped
@@ -30,19 +27,12 @@ public class DBService extends CRUDKubernetesDependentResource<Service, Trustify
         return newService(cr, context);
     }
 
-    @SuppressWarnings("unchecked")
     private Service newService(Trustify cr, Context<Trustify> context) {
-        final var labels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
         return new ServiceBuilder()
-                .withNewMetadata()
-                .withName(getServiceName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(labels)
-                .addToLabels(CRDUtils.getLabelsFromString(LABEL_SELECTOR))
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getServiceName(cr), LABEL_SELECTOR, cr))
+                        .build()
+                )
                 .withSpec(getServiceSpec(cr))
                 .build();
     }
@@ -53,7 +43,7 @@ public class DBService extends CRUDKubernetesDependentResource<Service, Trustify
                 .withPort(DBDeployment.getDatabasePort(cr))
                 .withProtocol(Constants.SERVICE_PROTOCOL)
                 .endPort()
-                .withSelector(Constants.DB_SELECTOR_LABELS)
+                .withSelector(DBDeployment.getPodSelectorLabels())
                 .withType("ClusterIP")
                 .build();
     }

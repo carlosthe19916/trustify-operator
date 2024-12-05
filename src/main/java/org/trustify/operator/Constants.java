@@ -1,29 +1,44 @@
 package org.trustify.operator;
 
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import org.trustify.operator.cdrs.v2alpha1.Trustify;
+import org.trustify.operator.utils.CRDUtils;
+
+import java.util.Collections;
 import java.util.Map;
+import java.util.function.Function;
 
 public class Constants {
     public static final String CRDS_GROUP = "org.trustify";
     public static final String CRDS_VERSION = "v1alpha1";
 
-    public static final String CONTEXT_LABELS_KEY = "labels";
+    public static final String CLUSTER_SERVICE = "kubernetesCluster";
+
+    public record Resource(String name, String labelSelector, Trustify cr) {
+    }
+
+    public static Function<Resource, ObjectMetaBuilder> metadataBuilder = resource -> {
+        Map<String, String> labels = Map.of(
+                "app.kubernetes.io/name", resource.cr.getMetadata().getName(),
+                "app.kubernetes.io/part-of", resource.cr.getMetadata().getName(),
+                "trustify-operator/cluster", Constants.TRUSTI_NAME
+        );
+        Map<String, String> labelSelector = CRDUtils.getLabelsFromString(resource.labelSelector);
+
+        return new ObjectMetaBuilder()
+                .withName(resource.name)
+                .withNamespace(resource.cr.getMetadata().getNamespace())
+                .withAnnotations(Collections.emptyMap())
+                .addToLabels(labels)
+                .addToLabels(labelSelector)
+                .withOwnerReferences(CRDUtils.getOwnerReference(resource.cr));
+    };
 
     //
     public static final String TRUSTI_NAME = "trustify";
     public static final String TRUSTI_UI_NAME = "trustify-ui";
     public static final String TRUSTI_SERVER_NAME = "trustify-server";
     public static final String TRUSTI_DB_NAME = "trustify-db";
-
-    //
-    public static final Map<String, String> DB_SELECTOR_LABELS = Map.of(
-            "trustify-operator/group", "db"
-    );
-    public static final Map<String, String> SERVER_SELECTOR_LABELS = Map.of(
-            "trustify-operator/group", "server"
-    );
-    public static final Map<String, String> UI_SELECTOR_LABELS = Map.of(
-            "trustify-operator/group", "ui"
-    );
 
     //
     public static final Integer HTTP_PORT = 8080;
@@ -51,7 +66,7 @@ public class Constants {
     public static final String DB_SECRET_USERNAME = "username";
     public static final String DB_SECRET_PASSWORD = "password";
     public static final String DB_NAME = "trustify";
-    public static final Integer DB_PORT= 5432;
+    public static final Integer DB_PORT = 5432;
 
     public static final String CERTIFICATES_FOLDER = "/mnt/certificates";
     public static final String WORKSPACES_FOLDER = "/mnt/workspace";
