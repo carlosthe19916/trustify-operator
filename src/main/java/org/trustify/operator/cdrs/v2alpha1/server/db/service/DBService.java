@@ -43,7 +43,7 @@ public class DBService extends CRUDKubernetesDependentResource<Service, Trustify
                 .withPort(DBDeployment.getDatabasePort(cr))
                 .withProtocol(Constants.SERVICE_PROTOCOL)
                 .endPort()
-                .withSelector(DBDeployment.getPodSelectorLabels())
+                .withSelector(DBDeployment.getPodSelectorLabels(cr))
                 .withType("ClusterIP")
                 .build();
     }

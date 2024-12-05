@@ -101,12 +101,12 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 )
                 .withReplicas(1)
                 .withSelector(new LabelSelectorBuilder()
-                        .withMatchLabels(getPodSelectorLabels())
+                        .withMatchLabels(getPodSelectorLabels(cr))
                         .build()
                 )
                 .withTemplate(new PodTemplateSpecBuilder()
                                 .withNewMetadata()
-                                .addToLabels(getPodSelectorLabels())
+                                .addToLabels(getPodSelectorLabels(cr))
                                 .endMetadata()
                                 .withSpec(new PodSpecBuilder()
                                                 .withRestartPolicy("Always")
@@ -222,7 +222,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
         return cr.getMetadata().getName() + Constants.SERVER_DEPLOYMENT_SUFFIX;
     }
 
-    public static Map<String, String> getPodSelectorLabels() {
+    public static Map<String, String> getPodSelectorLabels(Trustify cr) {
         return Map.of(
                 "trustify-operator/group", "server"
         );

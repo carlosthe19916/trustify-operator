@@ -43,7 +43,7 @@ public class UIService extends CRUDKubernetesDependentResource<Service, Trustify
                                 .withProtocol(Constants.SERVICE_PROTOCOL)
                                 .build()
                 )
-                .withSelector(UIDeployment.getPodSelectorLabels())
+                .withSelector(UIDeployment.getPodSelectorLabels(cr))
                 .withType("ClusterIP")
                 .build();
     }

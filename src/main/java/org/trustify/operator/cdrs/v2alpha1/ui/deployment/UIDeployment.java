@@ -100,12 +100,12 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 )
                 .withReplicas(1)
                 .withSelector(new LabelSelectorBuilder()
-                        .withMatchLabels(getPodSelectorLabels())
+                        .withMatchLabels(getPodSelectorLabels(cr))
                         .build()
                 )
                 .withTemplate(new PodTemplateSpecBuilder()
                         .withNewMetadata()
-                        .withLabels(getPodSelectorLabels())
+                        .withLabels(getPodSelectorLabels(cr))
                         .endMetadata()
                         .withSpec(new PodSpecBuilder()
                                 .withRestartPolicy("Always")
@@ -202,7 +202,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
         return cr.getMetadata().getName() + Constants.UI_DEPLOYMENT_SUFFIX;
     }
 
-    public static Map<String, String> getPodSelectorLabels() {
+    public static Map<String, String> getPodSelectorLabels(Trustify cr) {
         return Map.of(
                 "trustify-operator/group", "ui"
         );

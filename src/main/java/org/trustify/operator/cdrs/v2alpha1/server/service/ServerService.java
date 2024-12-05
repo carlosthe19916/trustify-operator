@@ -50,7 +50,7 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
                                 .withProtocol(Constants.SERVICE_PROTOCOL)
                                 .build()
                 )
-                .withSelector(ServerDeployment.getPodSelectorLabels())
+                .withSelector(ServerDeployment.getPodSelectorLabels(cr))
                 .withType("ClusterIP")
                 .build();
     }
