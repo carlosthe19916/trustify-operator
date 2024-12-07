@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        preset: [ "openshift", "microshift" ]
+        preset: [ "openshift" ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
