@@ -11,7 +11,6 @@ import org.trustify.operator.Constants;
 import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
-import org.trustify.operator.utils.CRDUtils;
 
 import java.util.Map;
 import java.util.Optional;
@@ -35,24 +34,17 @@ public class ServerStoragePersistentVolumeClaim extends CRUDKubernetesDependentR
         return newPersistentVolumeClaim(cr, context);
     }
 
-    @SuppressWarnings("unchecked")
     private PersistentVolumeClaim newPersistentVolumeClaim(Trustify cr, Context<Trustify> context) {
-        final var labels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
         String pvcStorageSize = Optional.ofNullable(cr.getSpec().storageSpec())
                 .flatMap(storageSpec -> Optional.ofNullable(storageSpec.filesystemStorageSpec()))
                 .map(TrustifySpec.FilesystemStorageSpec::pvcSize)
                 .orElse(trustifyConfig.defaultPvcSize());
 
         return new PersistentVolumeClaimBuilder()
-                .withNewMetadata()
-                .withName(getPersistentVolumeClaimName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(labels)
-                .addToLabels("component", "server")
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getPersistentVolumeClaimName(cr), LABEL_SELECTOR, cr))
+                        .build()
+                )
                 .withSpec(new PersistentVolumeClaimSpecBuilder()
                         .withAccessModes("ReadWriteOnce")
                         .withResources(new VolumeResourceRequirementsBuilder()

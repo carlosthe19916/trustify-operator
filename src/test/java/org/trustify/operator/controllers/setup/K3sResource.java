@@ -41,9 +41,12 @@ public class K3sResource implements QuarkusTestResourceLifecycleManager {
             String rancherVersion = Optional.ofNullable(System.getenv(KUBERNETES_VERSION)).orElse("latest");
             logger.info("Using rancher/k3s:" + rancherVersion);
 
-            k3sContainer = new K3sContainer(DockerImageName.parse("rancher/k3s:" + rancherVersion));
+            k3sContainer = new K3sContainer(DockerImageName.parse("rancher/k3s:" + rancherVersion))
+                    .withCommand("server", "--tls-san=${DockerClientFactory.instance().dockerHostIpAddress()}")
+                    .withExposedPorts(443, 6443);
             k3sContainer.start();
 
+            result.put("k3sClusterHost", "localhost:" + k3sContainer.getMappedPort(443));
             kubeConfigYaml = k3sContainer.getKubeConfigYaml();
         }
 
