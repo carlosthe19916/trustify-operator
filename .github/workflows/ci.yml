@@ -110,7 +110,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create operator
-        run: DOCKERFILE=Dockerfile.jvm make docker-build docker-push
+#        run: DOCKERFILE=Dockerfile.jvm make docker-build docker-push
+        run: make docker-build docker-push
       - name: Create operator-bundle
         run: make bundle-build bundle-push
   run-ci:
