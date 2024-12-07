@@ -18,6 +18,7 @@
         <surefire-plugin.version>3.2.5</surefire-plugin.version>
 
         <quarkus-sdk.version>6.8.4</quarkus-sdk.version>
+        <fabric8-plugin.version>6.13.4</fabric8-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -120,6 +121,12 @@
         </dependency>
 
         <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>generator-annotations</artifactId>
+            <version>${fabric8-plugin.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
@@ -185,6 +192,23 @@
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>java-generator-maven-plugin</artifactId>
+                <version>${fabric8-plugin.version}</version>
+                <configuration>
+                    <source>${project.basedir}/src/main/resources/crd/keycloaks.k8s.keycloak.org-v1.crd.yml</source>
+                    <extraAnnotations>false</extraAnnotations>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
