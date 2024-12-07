@@ -89,7 +89,7 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                 @Dependent(
                         name = "ui-deployment",
                         type = UIDeployment.class,
-                        dependsOn = {"server-deployment"},
+                        dependsOn = {"server-service"},
                         readyPostcondition = UIDeployment.class
                 ),
                 @Dependent(
