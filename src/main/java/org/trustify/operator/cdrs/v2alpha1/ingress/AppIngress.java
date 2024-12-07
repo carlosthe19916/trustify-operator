@@ -2,10 +2,8 @@ package org.trustify.operator.cdrs.v2alpha1.ingress;
 
 import io.fabric8.kubernetes.api.model.networking.v1.*;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
-import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
@@ -19,8 +17,7 @@ import java.util.List;
 
 @KubernetesDependent(labelSelector = AppIngress.LABEL_SELECTOR, resourceDiscriminator = AppIngressDiscriminator.class)
 @ApplicationScoped
-public class AppIngress extends CRUDKubernetesDependentResource<Ingress, Trustify>
-        implements Condition<Ingress, Trustify> {
+public class AppIngress extends CRUDKubernetesDependentResource<Ingress, Trustify> {
 
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=ui,component-variant=https";
 
@@ -77,21 +74,6 @@ public class AppIngress extends CRUDKubernetesDependentResource<Ingress, Trustif
                         .build()
                 )
                 .build();
-    }
-
-    @Override
-    public boolean isMet(DependentResource<Ingress, Trustify> dependentResource, Trustify primary, Context<Trustify> context) {
-        return context.getSecondaryResource(Ingress.class, new AppIngressDiscriminator())
-                .map(in -> {
-                    final var status = in.getStatus();
-                    if (status != null) {
-                        final var ingresses = status.getLoadBalancer().getIngress();
-                        // only set the status if the ingress is ready to provide the info we need
-                        return ingresses != null && !ingresses.isEmpty();
-                    }
-                    return false;
-                })
-                .orElse(false);
     }
 
     protected IngressTLS getIngressTLS(Trustify cr) {

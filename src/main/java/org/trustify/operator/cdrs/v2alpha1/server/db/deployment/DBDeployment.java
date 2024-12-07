@@ -3,11 +3,8 @@ package org.trustify.operator.cdrs.v2alpha1.server.db.deployment;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.*;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.Matcher;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
-import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
@@ -16,7 +13,6 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
-import org.trustify.operator.cdrs.v2alpha1.server.db.utils.DBUtils;
 import org.trustify.operator.utils.CRDUtils;
 
 import java.util.Arrays;
@@ -26,8 +22,7 @@ import java.util.Optional;
 
 @KubernetesDependent(labelSelector = DBDeployment.LABEL_SELECTOR, resourceDiscriminator = DBDeploymentDiscriminator.class)
 @ApplicationScoped
-public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Trustify>
-        implements Matcher<Deployment, Trustify>, Condition<Deployment, Trustify> {
+public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Trustify> {
 
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=db";
 
@@ -54,11 +49,6 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 .map(c -> c.getImage() != null)
                 .orElse(false)
         );
-    }
-
-    @Override
-    public boolean isMet(DependentResource<Deployment, Trustify> dependentResource, Trustify cr, Context<Trustify> context) {
-        return DBUtils.isDeploymentReady(dependentResource, cr, context);
     }
 
     private Deployment newDeployment(Trustify cr, Context<Trustify> context) {

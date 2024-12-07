@@ -16,8 +16,10 @@ import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifyStatusCondition;
 import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngress;
+import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngressReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeploymentActivationCondition;
+import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeploymentReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaimActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
@@ -55,7 +57,7 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                         name = "db-deployment",
                         type = DBDeployment.class,
                         dependsOn = {"db-pvc", "db-secret"},
-                        readyPostcondition = DBDeployment.class,
+                        readyPostcondition = DBDeploymentReadyPostCondition.class,
                         activationCondition = DBDeploymentActivationCondition.class
                 ),
                 @Dependent(
@@ -92,7 +94,7 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                 @Dependent(
                         name = "app-ingress",
                         type = AppIngress.class,
-                        readyPostcondition = AppIngress.class
+                        readyPostcondition = AppIngressReadyPostCondition.class
                 )
         }
 )
