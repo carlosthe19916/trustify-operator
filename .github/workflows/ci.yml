@@ -55,10 +55,11 @@ jobs:
           distribution: "temurin"
           java-version: "21"
           cache: "maven"
-      - name: Install Google Chrome
+      - name: Install required virtualization software
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y google-chrome-stable
+          sudo apt-get update
+          sudo apt install qemu-kvm libvirt-daemon libvirt-daemon-system
+          sudo usermod -a -G libvirt $USER
       - name: Remove unwanted stuff to free up disk image
         run: |
           df -h
