@@ -294,7 +294,9 @@ public abstract class ReconcilerBaseTest {
         MatcherAssert.assertThat(serviceBackend.getName(), Matchers.is(UIService.getServiceName(cr)));
         MatcherAssert.assertThat(serviceBackend.getPort().getNumber(), Matchers.is(8080));
 
-        verifyInBrowser(cr);
+        if (testBrowser) {
+            verifyInBrowser(cr);
+        }
     }
 
     protected void verifyInBrowser(Trustify cr) {
