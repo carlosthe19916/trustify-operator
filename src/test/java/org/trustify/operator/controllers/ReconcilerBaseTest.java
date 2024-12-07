@@ -8,6 +8,7 @@ import io.fabric8.kubernetes.api.model.networking.v1.IngressLoadBalancerIngress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ListVisitFromServerGetDeleteRecreateWaitApplicable;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import io.javaoperatorsdk.operator.Operator;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -15,6 +16,7 @@ import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -56,14 +58,16 @@ public abstract class ReconcilerBaseTest {
     @Inject
     Operator operator;
 
-    @Inject
-    ClusterService clusterService;
-
     protected Namespace namespace = null;
     protected Job imagePullerJob = null;
 
     private Trustify trustify;
     private ListVisitFromServerGetDeleteRecreateWaitApplicable<HasMetadata> resources;
+
+    @BeforeAll
+    static void beforeAll() {
+        WebDriverManager.chromedriver().setup();
+    }
 
     @BeforeEach
     public void beforeEach() {
