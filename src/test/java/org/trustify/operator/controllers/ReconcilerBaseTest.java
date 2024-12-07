@@ -330,6 +330,7 @@ public abstract class ReconcilerBaseTest {
 
         // Selenium
         ChromeOptions chromeOptions = new ChromeOptions();
+        chromeOptions.addArguments("--headless", "--disable-gpu", "--no-sandbox");
         chromeOptions.setAcceptInsecureCerts(true);
 
         WebDriver driver = new ChromeDriver(chromeOptions);
