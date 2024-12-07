@@ -31,6 +31,7 @@ import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeploymentRec
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaimActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
+import org.trustify.operator.cdrs.v2alpha1.server.service.ServerServiceReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.ui.deployment.UIDeployment;
 import org.trustify.operator.cdrs.v2alpha1.ui.service.UIService;
 import org.trustify.operator.services.ClusterService;
@@ -75,12 +76,14 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                 @Dependent(
                         name = "server-deployment",
                         type = ServerDeployment.class,
+                        dependsOn = {"server-service"},
                         reconcilePrecondition = ServerDeploymentReconcilePreCondition.class,
                         readyPostcondition = ServerDeployment.class
                 ),
                 @Dependent(
                         name = "server-service",
-                        type = ServerService.class
+                        type = ServerService.class,
+                        readyPostcondition = ServerServiceReadyPostCondition.class
                 ),
 
                 @Dependent(

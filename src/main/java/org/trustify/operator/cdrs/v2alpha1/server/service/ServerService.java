@@ -10,6 +10,7 @@ import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.utils.ServerUtils;
+import org.trustify.operator.services.Cluster;
 
 @KubernetesDependent(labelSelector = ServerService.LABEL_SELECTOR, resourceDiscriminator = ServerServiceDiscriminator.class)
 @ApplicationScoped
@@ -33,7 +34,7 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
         return new ServiceBuilder()
                 .withMetadata(Constants.metadataBuilder
                         .apply(new Constants.Resource(getServiceName(cr), LABEL_SELECTOR, cr))
-                        .addToAnnotations("service.beta.openshift.io/serving-cert-secret-name", ServerUtils.getSelfGeneratedTlsSecretName(cr))
+                        .addToAnnotations("service.beta.openshift.io/serving-cert-secret-name", Cluster.getServerSelfGeneratedTlsSecretName(cr))
                         .build()
                 )
                 .withSpec(getServiceSpec(cr))

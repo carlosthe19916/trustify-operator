@@ -4,14 +4,12 @@ import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
-import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 
 import java.util.Objects;
 import java.util.Optional;
 
-@ApplicationScoped
 public class ServerStoragePersistentVolumeClaimActivationCondition implements Condition<PersistentVolumeClaim, Trustify> {
 
     @Override
