@@ -27,6 +27,7 @@ import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecretActivationCo
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBServiceActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeploymentReconcilePreCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaimActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
@@ -74,6 +75,7 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                 @Dependent(
                         name = "server-deployment",
                         type = ServerDeployment.class,
+                        reconcilePrecondition = ServerDeploymentReconcilePreCondition.class,
                         readyPostcondition = ServerDeployment.class
                 ),
                 @Dependent(
