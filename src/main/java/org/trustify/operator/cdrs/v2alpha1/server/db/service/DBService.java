@@ -52,4 +52,8 @@ public class DBService extends CRUDKubernetesDependentResource<Service, Trustify
         return cr.getMetadata().getName() + Constants.DB_SERVICE_SUFFIX;
     }
 
+    public static String getServiceHost(Trustify cr) {
+        return String.format("%s.%s.svc", DBService.getServiceName(cr), cr.getMetadata().getNamespace());
+    }
+
 }

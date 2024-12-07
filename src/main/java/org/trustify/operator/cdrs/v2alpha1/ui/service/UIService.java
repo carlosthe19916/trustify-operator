@@ -49,7 +49,7 @@ public class UIService extends CRUDKubernetesDependentResource<Service, Trustify
     }
 
     public static int getServicePort(Trustify cr) {
-        return Constants.HTTP_PORT;
+        return UIDeployment.getDeploymentPort(cr);
     }
 
     public static String getServiceName(Trustify cr) {

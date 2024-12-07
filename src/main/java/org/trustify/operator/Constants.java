@@ -41,9 +41,6 @@ public class Constants {
     public static final String TRUSTI_DB_NAME = "trustify-db";
 
     //
-    public static final Integer HTTP_PORT = 8080;
-    public static final Integer HTTPS_PORT = 8443;
-    public static final Integer HTTP_INFRAESTRUCTURE_PORT = 9010;
     public static final String SERVICE_PROTOCOL = "TCP";
 
     //
@@ -67,7 +64,4 @@ public class Constants {
     public static final String DB_SECRET_PASSWORD = "password";
     public static final String DB_NAME = "trustify";
     public static final Integer DB_PORT = 5432;
-
-    public static final String CERTIFICATES_FOLDER = "/mnt/certificates";
-    public static final String WORKSPACES_FOLDER = "/mnt/workspace";
 }

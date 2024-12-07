@@ -3,13 +3,14 @@ package org.trustify.operator.controllers;
 import io.fabric8.kubernetes.api.model.*;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.trustify.operator.Constants;
+import jakarta.inject.Inject;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
-import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
+import org.trustify.operator.cdrs.v2alpha1.server.utils.ServerUtils;
 
 import java.util.*;
 import java.util.function.Function;
@@ -17,6 +18,9 @@ import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class TrustifyDistConfigurator {
+
+    @Inject
+    ServerUtils serverUtils;
 
     public record Config(
             List<EnvVar> allEnvVars,
@@ -54,7 +58,7 @@ public class TrustifyDistConfigurator {
         );
         config.allEnvVars.add(new EnvVarBuilder()
                 .withName("INFRASTRUCTURE_BIND")
-                .withValue("[::]:" + Constants.HTTP_INFRAESTRUCTURE_PORT)
+                .withValue("[::]:" + ServerDeployment.getDeploymentInfrastructurePort(cr))
                 .build()
         );
         config.allEnvVars.add(new EnvVarBuilder()
@@ -65,13 +69,8 @@ public class TrustifyDistConfigurator {
     }
 
     private void configureHttp(Config config, Trustify cr) {
-        var optionMapper = optionMapper(cr.getSpec().httpSpec());
-        configureTLS(config, cr, optionMapper);
+        configureTLS(config, cr);
 
-        List<EnvVar> envVars = optionMapper.getEnvVars();
-        config.allEnvVars.addAll(envVars);
-
-        // Force to use HTTP v4
         config.allEnvVars.add(new EnvVarBuilder()
                 .withName("HTTP_SERVER_BIND_ADDR")
                 .withValue("::")
@@ -79,36 +78,49 @@ public class TrustifyDistConfigurator {
         );
     }
 
-    private void configureTLS(Config config, Trustify cr, OptionMapper<TrustifySpec.HttpSpec> optionMapper) {
+    private void configureTLS(Config config, Trustify cr) {
         final String certFileOptionName = "HTTP_SERVER_TLS_CERTIFICATE_FILE";
         final String keyFileOptionName = "HTTP_SERVER_TLS_KEY_FILE";
 
-        if (!ServerService.isTlsConfigured(cr)) {
-            // for mapping and triggering warning in status if someone uses the fields directly
-            optionMapper.mapOption(certFileOptionName);
-            optionMapper.mapOption(keyFileOptionName);
+        Optional<String> tlsSecretName = serverUtils.tlsSecretName(cr);
+        if (tlsSecretName.isEmpty()) {
             return;
         }
 
-        optionMapper.mapOption("HTTP_SERVER_TLS_ENABLED", httpSpec -> true);
-        optionMapper.mapOption(certFileOptionName, Constants.CERTIFICATES_FOLDER + "/tls.crt");
-        optionMapper.mapOption(keyFileOptionName, Constants.CERTIFICATES_FOLDER + "/tls.key");
+        String certificatesDir = "/opt/trustify/tls-server";
+
+        config.allEnvVars.add(new EnvVarBuilder()
+                .withName("HTTP_SERVER_TLS_ENABLED")
+                .withValue("true")
+                .build()
+        );
+        config.allEnvVars.add(new EnvVarBuilder()
+                .withName(certFileOptionName)
+                .withValue(certificatesDir + "/tls.crt")
+                .build()
+        );
+        config.allEnvVars.add(new EnvVarBuilder()
+                .withName(keyFileOptionName)
+                .withValue(certificatesDir + "/tls.key")
+                .build()
+        );
 
         var volume = new VolumeBuilder()
-                .withName("trustify-tls-certificates")
+                .withName("tls-server")
                 .withNewSecret()
-                .withSecretName(cr.getSpec().httpSpec().tlsSecret())
+                .withSecretName(tlsSecretName.get())
                 .withOptional(false)
                 .endSecret()
                 .build();
 
         var volumeMount = new VolumeMountBuilder()
                 .withName(volume.getName())
-                .withMountPath(Constants.CERTIFICATES_FOLDER)
+                .withMountPath(certificatesDir)
+                .withReadOnly(true)
                 .build();
 
         config.allVolumes.add(volume);
-        config.allVolumeMounts().add(volumeMount);
+        config.allVolumeMounts.add(volumeMount);
     }
 
     private void configureDatabase(Config config, Trustify cr) {
@@ -131,7 +143,7 @@ public class TrustifyDistConfigurator {
                         .mapOption("TRUSTD_DB_USER", spec -> DBDeployment.getUsernameSecretKeySelector(cr))
                         .mapOption("TRUSTD_DB_PASSWORD", spec -> DBDeployment.getPasswordSecretKeySelector(cr))
                         .mapOption("TRUSTD_DB_NAME", spec -> DBDeployment.getDatabaseName(cr))
-                        .mapOption("TRUSTD_DB_HOST", spec -> String.format("%s.%s.svc", DBService.getServiceName(cr), cr.getMetadata().getNamespace()))
+                        .mapOption("TRUSTD_DB_HOST", spec -> DBService.getServiceHost(cr))
                         .mapOption("TRUSTD_DB_PORT", spec -> DBDeployment.getDatabasePort(cr))
                         .getEnvVars()
                 );

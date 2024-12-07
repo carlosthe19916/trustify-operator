@@ -33,6 +33,9 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     @Inject
     TrustifyImagesConfig trustifyImagesConfig;
 
+    @Inject
+    ServerService serverService;
+
     public UIDeployment() {
         super(Deployment.class);
     }
@@ -120,7 +123,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                                                 new ContainerPortBuilder()
                                                         .withName("http")
                                                         .withProtocol("TCP")
-                                                        .withContainerPort(Constants.HTTP_PORT)
+                                                        .withContainerPort(getDeploymentPort(cr))
                                                         .build()
                                         )
                                         .withLivenessProbe(new ProbeBuilder()
@@ -142,7 +145,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                                         .withReadinessProbe(new ProbeBuilder()
                                                 .withHttpGet(new HTTPGetActionBuilder()
                                                         .withPath("/")
-                                                        .withNewPort(Constants.HTTP_PORT)
+                                                        .withNewPort(getDeploymentPort(cr))
                                                         .withScheme("HTTP")
                                                         .build()
                                                 )
@@ -185,7 +188,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                         .build(),
                 new EnvVarBuilder()
                         .withName("TRUSTIFY_API_URL")
-                        .withValue(ServerService.getServiceUrl(cr))
+                        .withValue(serverService.getServiceUrl(cr))
                         .build(),
                 new EnvVarBuilder()
                         .withName("UI_INGRESS_PROXY_BODY_SIZE")
@@ -200,6 +203,10 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
 
     public static String getDeploymentName(Trustify cr) {
         return cr.getMetadata().getName() + Constants.UI_DEPLOYMENT_SUFFIX;
+    }
+
+    public static int getDeploymentPort(Trustify cr) {
+        return 8080;
     }
 
     public static Map<String, String> getPodSelectorLabels(Trustify cr) {

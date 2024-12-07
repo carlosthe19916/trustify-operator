@@ -5,17 +5,20 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
-import org.trustify.operator.utils.CRDUtils;
+import org.trustify.operator.cdrs.v2alpha1.server.utils.ServerUtils;
 
 @KubernetesDependent(labelSelector = ServerService.LABEL_SELECTOR, resourceDiscriminator = ServerServiceDiscriminator.class)
 @ApplicationScoped
 public class ServerService extends CRUDKubernetesDependentResource<Service, Trustify> {
 
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=server";
+
+    @Inject
+    ServerUtils serverUtils;
 
     public ServerService() {
         super(Service.class);
@@ -30,6 +33,7 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
         return new ServiceBuilder()
                 .withMetadata(Constants.metadataBuilder
                         .apply(new Constants.Resource(getServiceName(cr), LABEL_SELECTOR, cr))
+                        .addToAnnotations("service.beta.openshift.io/serving-cert-secret-name", ServerUtils.getSelfGeneratedTlsSecretName(cr))
                         .build()
                 )
                 .withSpec(getServiceSpec(cr))
@@ -46,7 +50,7 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
                                 .build(),
                         new ServicePortBuilder()
                                 .withName("http-infra")
-                                .withPort(getServiceInfraestructurePort(cr))
+                                .withPort(getServiceInfrastructurePort(cr))
                                 .withProtocol(Constants.SERVICE_PROTOCOL)
                                 .build()
                 )
@@ -56,23 +60,24 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
     }
 
     public static int getServicePort(Trustify cr) {
-        return Constants.HTTP_PORT;
+        return ServerDeployment.getDeploymentPort(cr);
     }
 
-    public static int getServiceInfraestructurePort(Trustify cr) {
-        return Constants.HTTP_INFRAESTRUCTURE_PORT;
+    public static int getServiceInfrastructurePort(Trustify cr) {
+        return ServerDeployment.getDeploymentInfrastructurePort(cr);
     }
 
     public static String getServiceName(Trustify cr) {
         return cr.getMetadata().getName() + Constants.SERVER_SERVICE_SUFFIX;
     }
 
-    public static String getServiceUrl(Trustify cr) {
-        return String.format("http://%s:%s", getServiceName(cr), getServicePort(cr));
+    public String getServiceHost(Trustify cr) {
+        return String.format("%s.%s.svc", getServiceName(cr), cr.getMetadata().getNamespace());
     }
 
-    public static boolean isTlsConfigured(Trustify cr) {
-        var tlsSecret = CRDUtils.getValueFromSubSpec(cr.getSpec().httpSpec(), TrustifySpec.HttpSpec::tlsSecret);
-        return tlsSecret.isPresent() && !tlsSecret.get().trim().isEmpty();
+    public String getServiceUrl(Trustify cr) {
+        String protocol = serverUtils.tlsSecretName(cr).isPresent() ? "https" : "http";
+        return String.format("%s://%s:%s", protocol, getServiceHost(cr), getServicePort(cr));
     }
+
 }
