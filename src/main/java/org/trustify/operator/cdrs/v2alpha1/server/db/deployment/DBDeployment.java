@@ -10,8 +10,8 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.trustify.operator.Config;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
@@ -23,8 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @KubernetesDependent(labelSelector = DBDeployment.LABEL_SELECTOR, resourceDiscriminator = DBDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -34,7 +32,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=db";
 
     @Inject
-    Config config;
+    TrustifyImagesConfig trustifyImagesConfig;
 
     public DBDeployment() {
         super(Deployment.class);
@@ -63,36 +61,23 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
         return DBUtils.isDeploymentReady(dependentResource, cr, context);
     }
 
-    @SuppressWarnings("unchecked")
     private Deployment newDeployment(Trustify cr, Context<Trustify> context) {
-        final var contextLabels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
         return new DeploymentBuilder()
-                .withNewMetadata()
-                .withName(getDeploymentName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(contextLabels)
-                .addToLabels("component", "db")
-                .addToLabels(Map.of(
-                        "app.openshift.io/runtime", "postgresql"
-                ))
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getDeploymentName(cr), LABEL_SELECTOR, cr))
+                        .addToLabels("app.openshift.io/runtime", "postgresql")
+                        .build()
+                )
                 .withSpec(getDeploymentSpec(cr, context))
                 .build();
     }
 
-    @SuppressWarnings("unchecked")
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        final var contextLabels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
+        String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(trustifyImagesConfig.dbImage());
+        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
-        Map<String, String> selectorLabels = Constants.DB_SELECTOR_LABELS;
-        String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(config.dbImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(config.imagePullPolicy());
-
-        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(cr.getSpec().databaseSpec(), TrustifySpec.DatabaseSpec::resourceLimits)
+        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils
+                .getValueFromSubSpec(cr.getSpec().databaseSpec(), TrustifySpec.DatabaseSpec::resourceLimits)
                 .orElse(null);
 
         return new DeploymentSpecBuilder()
@@ -102,15 +87,12 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 )
                 .withReplicas(1)
                 .withSelector(new LabelSelectorBuilder()
-                        .withMatchLabels(selectorLabels)
+                        .withMatchLabels(getPodSelectorLabels(cr))
                         .build()
                 )
                 .withTemplate(new PodTemplateSpecBuilder()
                         .withNewMetadata()
-                        .withLabels(Stream
-                                .concat(contextLabels.entrySet().stream(), selectorLabels.entrySet().stream())
-                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                        )
+                        .withLabels(getPodSelectorLabels(cr))
                         .endMetadata()
                         .withSpec(new PodSpecBuilder()
                                 .withRestartPolicy("Always")
@@ -209,6 +191,12 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
 
     public static String getDeploymentName(Trustify cr) {
         return cr.getMetadata().getName() + Constants.DB_DEPLOYMENT_SUFFIX;
+    }
+
+    public static Map<String, String> getPodSelectorLabels(Trustify cr) {
+        return Map.of(
+                "trustify-operator/group", "db"
+        );
     }
 
     public static SecretKeySelector getUsernameSecretKeySelector(Trustify cr) {

@@ -10,8 +10,8 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.trustify.operator.Config;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
@@ -21,8 +21,6 @@ import org.trustify.operator.utils.CRDUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @KubernetesDependent(labelSelector = ServerDeployment.LABEL_SELECTOR, resourceDiscriminator = ServerDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -32,7 +30,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=server";
 
     @Inject
-    Config config;
+    TrustifyImagesConfig trustifyImagesConfig;
 
     public ServerDeployment() {
         super(Deployment.class);
@@ -71,35 +69,23 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 .orElse(false);
     }
 
-    @SuppressWarnings("unchecked")
     private Deployment newDeployment(Trustify cr, Context<Trustify> context, TrustifyDistConfigurator distConfigurator) {
-        final var contextLabels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
         return new DeploymentBuilder()
-                .withNewMetadata()
-                .withName(getDeploymentName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(contextLabels)
-                .addToLabels("component", "server")
-                .withAnnotations(Map.of("app.openshift.io/connects-to", """
-                        [{"apiVersion": "apps/v1", "kind":"Deployment", "name": "%s"}]
-                        """.formatted(DBDeployment.getDeploymentName(cr))
-                ))
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getDeploymentName(cr), LABEL_SELECTOR, cr))
+                        .withAnnotations(Map.of("app.openshift.io/connects-to", """
+                                [{"apiVersion": "apps/v1", "kind":"Deployment", "name": "%s"}]
+                                """.formatted(DBDeployment.getDeploymentName(cr))
+                        ))
+                        .build()
+                )
                 .withSpec(getDeploymentSpec(cr, context, distConfigurator))
                 .build();
     }
 
-    @SuppressWarnings("unchecked")
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context, TrustifyDistConfigurator distConfigurator) {
-        final var contextLabels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
-        Map<String, String> selectorLabels = Constants.SERVER_SELECTOR_LABELS;
-        String image = Optional.ofNullable(cr.getSpec().serverImage()).orElse(config.serverImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(config.imagePullPolicy());
+        String image = Optional.ofNullable(cr.getSpec().serverImage()).orElse(trustifyImagesConfig.serverImage());
+        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
         List<EnvVar> envVars = distConfigurator.getAllEnvVars();
         List<Volume> volumes = distConfigurator.getAllVolumes();
@@ -115,127 +101,130 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 )
                 .withReplicas(1)
                 .withSelector(new LabelSelectorBuilder()
-                        .withMatchLabels(selectorLabels)
+                        .withMatchLabels(getPodSelectorLabels(cr))
                         .build()
                 )
                 .withTemplate(new PodTemplateSpecBuilder()
-                        .withNewMetadata()
-                        .withLabels(Stream
-                                .concat(contextLabels.entrySet().stream(), selectorLabels.entrySet().stream())
-                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                        )
-                        .endMetadata()
-                        .withSpec(new PodSpecBuilder()
-                                .withRestartPolicy("Always")
-                                .withTerminationGracePeriodSeconds(70L)
-                                .withImagePullSecrets(cr.getSpec().imagePullSecrets())
+                                .withNewMetadata()
+                                .addToLabels(getPodSelectorLabels(cr))
+                                .endMetadata()
+                                .withSpec(new PodSpecBuilder()
+                                                .withRestartPolicy("Always")
+                                                .withTerminationGracePeriodSeconds(70L)
+                                                .withImagePullSecrets(cr.getSpec().imagePullSecrets())
 //                                .withServiceAccountName(Constants.TRUSTI_NAME)
-                                .withInitContainers(new ContainerBuilder()
-                                        .withName("migrate")
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(envVars)
-                                        .withCommand(
-                                                "/usr/local/bin/trustd",
-                                                "db",
-                                                "migrate"
-                                        )
-                                        .build()
-                                )
-                                .withContainers(new ContainerBuilder()
-                                        .withName(Constants.TRUSTI_SERVER_NAME)
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(envVars)
-                                        .withCommand(
-                                                "/usr/local/bin/trustd",
-                                                "api",
-                                                "--sample-data",
-                                                "--infrastructure-enabled",
-                                                "--infrastructure-bind=0.0.0.0:" + Constants.HTTP_INFRAESTRUCTURE_PORT
-                                        )
-                                        .withPorts(
-                                                new ContainerPortBuilder()
-                                                        .withName("http")
-                                                        .withProtocol("TCP")
-                                                        .withContainerPort(Constants.HTTP_PORT)
-                                                        .build(),
+                                                .withInitContainers(new ContainerBuilder()
+                                                        .withName("migrate")
+                                                        .withImage(image)
+                                                        .withImagePullPolicy(imagePullPolicy)
+                                                        .withEnv(envVars)
+                                                        .withCommand(
+                                                                "/usr/local/bin/trustd",
+                                                                "db",
+                                                                "migrate"
+                                                        )
+                                                        .build()
+                                                )
+                                                .withContainers(new ContainerBuilder()
+                                                                .withName(Constants.TRUSTI_SERVER_NAME)
+                                                                .withImage(image)
+                                                                .withImagePullPolicy(imagePullPolicy)
+                                                                .withEnv(envVars)
+                                                                .withCommand(
+                                                                        "/usr/local/bin/trustd",
+                                                                        "api",
+                                                                        "--sample-data",
+                                                                        "--infrastructure-enabled",
+                                                                        "--infrastructure-bind=0.0.0.0:" + Constants.HTTP_INFRAESTRUCTURE_PORT
+                                                                )
+                                                                .withPorts(
+                                                                        new ContainerPortBuilder()
+                                                                                .withName("http")
+                                                                                .withProtocol("TCP")
+                                                                                .withContainerPort(Constants.HTTP_PORT)
+                                                                                .build(),
 //                                                new ContainerPortBuilder()
 //                                                        .withName("https")
 //                                                        .withProtocol("TCP")
 //                                                        .withContainerPort(8443)
 //                                                        .build()
-                                                new ContainerPortBuilder()
-                                                        .withName("http-infra")
-                                                        .withProtocol("TCP")
-                                                        .withContainerPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
-                                                        .build()
-                                        )
-                                        .withLivenessProbe(new ProbeBuilder()
-                                                .withHttpGet(new HTTPGetActionBuilder()
-                                                        .withPath("/health/live")
-                                                        .withNewPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
-                                                        .withScheme("HTTP")
-                                                        .build()
+                                                                        new ContainerPortBuilder()
+                                                                                .withName("http-infra")
+                                                                                .withProtocol("TCP")
+                                                                                .withContainerPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
+                                                                                .build()
+                                                                )
+                                                                .withLivenessProbe(new ProbeBuilder()
+                                                                        .withHttpGet(new HTTPGetActionBuilder()
+                                                                                .withPath("/health/live")
+                                                                                .withNewPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
+                                                                                .withScheme("HTTP")
+                                                                                .build()
+                                                                        )
+                                                                        .withInitialDelaySeconds(5)
+                                                                        .withTimeoutSeconds(10)
+                                                                        .withPeriodSeconds(10)
+                                                                        .withSuccessThreshold(1)
+                                                                        .withFailureThreshold(3)
+                                                                        .build()
+                                                                )
+                                                                .withReadinessProbe(new ProbeBuilder()
+                                                                        .withHttpGet(new HTTPGetActionBuilder()
+                                                                                .withPath("health/ready")
+                                                                                .withNewPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
+                                                                                .withScheme("HTTP")
+                                                                                .build()
+                                                                        )
+                                                                        .withInitialDelaySeconds(5)
+                                                                        .withTimeoutSeconds(1)
+                                                                        .withPeriodSeconds(10)
+                                                                        .withSuccessThreshold(1)
+                                                                        .withFailureThreshold(3)
+                                                                        .build()
+                                                                )
+                                                                .withStartupProbe(new ProbeBuilder()
+                                                                        .withHttpGet(new HTTPGetActionBuilder()
+                                                                                .withPath("/health/startup")
+                                                                                .withNewPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
+                                                                                .withScheme("HTTP")
+                                                                                .build()
+                                                                        )
+                                                                        .withInitialDelaySeconds(5)
+                                                                        .withTimeoutSeconds(1)
+                                                                        .withPeriodSeconds(10)
+                                                                        .withSuccessThreshold(1)
+                                                                        .withFailureThreshold(3)
+                                                                        .build()
+                                                                )
+                                                                .withVolumeMounts(volumeMounts)
+                                                                .withResources(new ResourceRequirementsBuilder()
+                                                                        .withRequests(Map.of(
+                                                                                "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuRequest).orElse("50m")),
+                                                                                "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryRequest).orElse("64Mi"))
+                                                                        ))
+                                                                        .withLimits(Map.of(
+                                                                                "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuLimit).orElse("250m")),
+                                                                                "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryLimit).orElse("256Mi"))
+                                                                        ))
+                                                                        .build()
+                                                                )
+                                                                .build()
                                                 )
-                                                .withInitialDelaySeconds(5)
-                                                .withTimeoutSeconds(10)
-                                                .withPeriodSeconds(10)
-                                                .withSuccessThreshold(1)
-                                                .withFailureThreshold(3)
+                                                .withVolumes(volumes)
                                                 .build()
-                                        )
-                                        .withReadinessProbe(new ProbeBuilder()
-                                                .withHttpGet(new HTTPGetActionBuilder()
-                                                        .withPath("health/ready")
-                                                        .withNewPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
-                                                        .withScheme("HTTP")
-                                                        .build()
-                                                )
-                                                .withInitialDelaySeconds(5)
-                                                .withTimeoutSeconds(1)
-                                                .withPeriodSeconds(10)
-                                                .withSuccessThreshold(1)
-                                                .withFailureThreshold(3)
-                                                .build()
-                                        )
-                                        .withStartupProbe(new ProbeBuilder()
-                                                .withHttpGet(new HTTPGetActionBuilder()
-                                                        .withPath("/health/startup")
-                                                        .withNewPort(Constants.HTTP_INFRAESTRUCTURE_PORT)
-                                                        .withScheme("HTTP")
-                                                        .build()
-                                                )
-                                                .withInitialDelaySeconds(5)
-                                                .withTimeoutSeconds(1)
-                                                .withPeriodSeconds(10)
-                                                .withSuccessThreshold(1)
-                                                .withFailureThreshold(3)
-                                                .build()
-                                        )
-                                        .withVolumeMounts(volumeMounts)
-                                        .withResources(new ResourceRequirementsBuilder()
-                                                .withRequests(Map.of(
-                                                        "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuRequest).orElse("50m")),
-                                                        "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryRequest).orElse("64Mi"))
-                                                ))
-                                                .withLimits(Map.of(
-                                                        "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuLimit).orElse("250m")),
-                                                        "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryLimit).orElse("256Mi"))
-                                                ))
-                                                .build()
-                                        )
-                                        .build()
                                 )
-                                .withVolumes(volumes)
                                 .build()
-                        )
-                        .build()
                 )
                 .build();
     }
 
     public static String getDeploymentName(Trustify cr) {
         return cr.getMetadata().getName() + Constants.SERVER_DEPLOYMENT_SUFFIX;
+    }
+
+    public static Map<String, String> getPodSelectorLabels(Trustify cr) {
+        return Map.of(
+                "trustify-operator/group", "server"
+        );
     }
 }

@@ -35,22 +35,15 @@ public class DBPersistentVolumeClaim extends CRUDKubernetesDependentResource<Per
         return newPersistentVolumeClaim(cr, context);
     }
 
-    @SuppressWarnings("unchecked")
     private PersistentVolumeClaim newPersistentVolumeClaim(Trustify cr, Context<Trustify> context) {
-        final var labels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
         String pvcStorageSize = CRDUtils.getValueFromSubSpec(cr.getSpec().databaseSpec(), TrustifySpec.DatabaseSpec::pvcSize)
                 .orElse(trustifyConfig.defaultPvcSize());
 
         return new PersistentVolumeClaimBuilder()
-                .withNewMetadata()
-                .withName(getPersistentVolumeClaimName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(labels)
-                .addToLabels("component", "db")
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getPersistentVolumeClaimName(cr), LABEL_SELECTOR, cr))
+                        .build()
+                )
                 .withSpec(new PersistentVolumeClaimSpecBuilder()
                         .withAccessModes("ReadWriteOnce")
                         .withResources(new VolumeResourceRequirementsBuilder()

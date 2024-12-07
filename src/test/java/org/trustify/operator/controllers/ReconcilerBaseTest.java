@@ -3,6 +3,9 @@ package org.trustify.operator.controllers;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressLoadBalancerIngress;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ListVisitFromServerGetDeleteRecreateWaitApplicable;
 import io.javaoperatorsdk.operator.Operator;
@@ -13,6 +16,11 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngress;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
@@ -21,9 +29,12 @@ import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
 import org.trustify.operator.cdrs.v2alpha1.ui.deployment.UIDeployment;
 import org.trustify.operator.cdrs.v2alpha1.ui.service.UIService;
+import org.trustify.operator.services.ClusterService;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public abstract class ReconcilerBaseTest {
 
@@ -36,11 +47,17 @@ public abstract class ReconcilerBaseTest {
     @ConfigProperty(name = "related.image.server")
     String serverImage;
 
+    @ConfigProperty(name = "k3sClusterHost")
+    Optional<String> k3sClusterHost;
+
     @Inject
     KubernetesClient client;
 
     @Inject
     Operator operator;
+
+    @Inject
+    ClusterService clusterService;
 
     protected Namespace namespace = null;
     protected Job imagePullerJob = null;
@@ -63,35 +80,35 @@ public abstract class ReconcilerBaseTest {
         // Create a pod to pull images. This is just to make things faster during test time
         imagePullerJob = new JobBuilder()
                 .withNewMetadata()
-                    .withName("pull-images")
+                .withName("pull-images")
                 .endMetadata()
                 .withNewSpec()
                 .withBackoffLimit(1)
-                    .withNewTemplate()
-                        .withNewSpec()
-                            .withRestartPolicy("Never")
-                            .withContainers(
-                                    new ContainerBuilder()
-                                            .withName("database")
-                                            .withImage(dbImage)
-                                            .withCommand("echo")
-                                            .withArgs("Database image pulled")
-                                    .build(),
-                                    new ContainerBuilder()
-                                            .withName("backend")
-                                            .withImage(serverImage)
-                                            .withCommand("echo")
-                                            .withArgs("Backend image pulled")
-                                            .build(),
-                                    new ContainerBuilder()
-                                            .withName("ui")
-                                            .withImage(uiImage)
-                                            .withCommand("echo")
-                                            .withArgs("UI image pulled")
-                                            .build()
-                            )
-                        .endSpec()
-                    .endTemplate()
+                .withNewTemplate()
+                .withNewSpec()
+                .withRestartPolicy("Never")
+                .withContainers(
+                        new ContainerBuilder()
+                                .withName("database")
+                                .withImage(dbImage)
+                                .withCommand("echo")
+                                .withArgs("Database image pulled")
+                                .build(),
+                        new ContainerBuilder()
+                                .withName("backend")
+                                .withImage(serverImage)
+                                .withCommand("echo")
+                                .withArgs("Backend image pulled")
+                                .build(),
+                        new ContainerBuilder()
+                                .withName("ui")
+                                .withImage(uiImage)
+                                .withCommand("echo")
+                                .withArgs("UI image pulled")
+                                .build()
+                )
+                .endSpec()
+                .endTemplate()
                 .endSpec()
                 .build();
 
@@ -272,5 +289,77 @@ public abstract class ReconcilerBaseTest {
         final var serviceBackend = path.getBackend().getService();
         MatcherAssert.assertThat(serviceBackend.getName(), Matchers.is(UIService.getServiceName(cr)));
         MatcherAssert.assertThat(serviceBackend.getPort().getNumber(), Matchers.is(8080));
+
+        verifyInBrowser(cr);
+    }
+
+    protected void verifyInBrowser(Trustify cr) {
+        Optional<String> host = k3sClusterHost.or(() -> {
+            Ingress ingress = client.network().v1().ingresses()
+                    .inNamespace(cr.getMetadata().getNamespace())
+                    .withName(AppIngress.getIngressName(cr))
+                    .get();
+
+            // If Host was set by user or Autogenerated by OCP
+            Optional<String> ingressHost = Optional.ofNullable(ingress.getSpec())
+                    .flatMap(ingressSpec -> ingressSpec
+                            .getRules()
+                            .stream().findFirst()
+                            .map(IngressRule::getHost)
+                    );
+
+            // Minikube
+            return ingressHost.or(() -> {
+                IngressLoadBalancerIngress ingressLoadBalancerIngress = client.network().v1().ingresses()
+                        .inNamespace(cr.getMetadata().getNamespace())
+                        .withName(AppIngress.getIngressName(cr))
+                        .get()
+                        .getStatus()
+                        .getLoadBalancer()
+                        .getIngress()
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
+
+                return Optional.ofNullable(ingressLoadBalancerIngress).map(IngressLoadBalancerIngress::getIp);
+            });
+        });
+
+        MatcherAssert.assertThat("Could not find Cluster Host/IP", host.isPresent(), Matchers.is(true));
+        String trustifyBaseUrl = "https://" + host.get();
+
+        // Selenium
+        ChromeOptions chromeOptions = new ChromeOptions();
+        chromeOptions.setAcceptInsecureCerts(true);
+
+        WebDriver driver = new ChromeDriver(chromeOptions);
+
+        try {
+            driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500));
+            driver.get(trustifyBaseUrl);
+
+            // Verify page is loaded
+            String title = driver.getTitle();
+            MatcherAssert.assertThat("Could not load index.html correctly", title, Matchers.equalTo("Trustification"));
+
+            // Verify importers
+            driver.get(trustifyBaseUrl + "/importers");
+
+            Optional<WebElement> pageTitle = driver.findElements(By.tagName("h1")).stream()
+                    .filter(webElement -> Objects.equals(webElement.getText(), "Importers"))
+                    .findAny();
+            MatcherAssert.assertThat("Could not find Importers Page", pageTitle.isPresent(), Matchers.is(true));
+
+            WebElement importerTable = driver.findElement(By.xpath("//table[@aria-label='Importer table']"));
+            List<WebElement> rows = importerTable.findElements(By.xpath("//tbody[@role='rowgroup']"));
+            MatcherAssert.assertThat("Importers page did not load data from backend", rows.size(), Matchers.greaterThan(2));
+
+            Optional<WebElement> cveRow = importerTable.findElements(By.xpath("//td[@data-label='Name']")).stream()
+                    .filter(webElement -> Objects.equals(webElement.getText(), "cve"))
+                    .findAny();
+            MatcherAssert.assertThat("CVE Importer was not found in table", cveRow.isPresent(), Matchers.is(true));
+        } finally {
+            driver.quit();
+        }
     }
 }

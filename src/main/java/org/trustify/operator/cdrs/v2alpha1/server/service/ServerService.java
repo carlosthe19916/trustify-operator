@@ -8,9 +8,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.utils.CRDUtils;
-
-import java.util.Map;
 
 @KubernetesDependent(labelSelector = ServerService.LABEL_SELECTOR, resourceDiscriminator = ServerServiceDiscriminator.class)
 @ApplicationScoped
@@ -23,23 +22,16 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
     }
 
     @Override
-    public Service desired(Trustify cr, Context context) {
+    public Service desired(Trustify cr, Context<Trustify> context) {
         return newService(cr, context);
     }
 
-    @SuppressWarnings("unchecked")
-    private Service newService(Trustify cr, Context context) {
-        final var labels = (Map<String, String>) context.managedDependentResourceContext()
-                .getMandatory(Constants.CONTEXT_LABELS_KEY, Map.class);
-
+    private Service newService(Trustify cr, Context<Trustify> context) {
         return new ServiceBuilder()
-                .withNewMetadata()
-                .withName(getServiceName(cr))
-                .withNamespace(cr.getMetadata().getNamespace())
-                .withLabels(labels)
-                .addToLabels("component", "server")
-                .withOwnerReferences(CRDUtils.getOwnerReference(cr))
-                .endMetadata()
+                .withMetadata(Constants.metadataBuilder
+                        .apply(new Constants.Resource(getServiceName(cr), LABEL_SELECTOR, cr))
+                        .build()
+                )
                 .withSpec(getServiceSpec(cr))
                 .build();
     }
@@ -58,7 +50,7 @@ public class ServerService extends CRUDKubernetesDependentResource<Service, Trus
                                 .withProtocol(Constants.SERVICE_PROTOCOL)
                                 .build()
                 )
-                .withSelector(Constants.SERVER_SELECTOR_LABELS)
+                .withSelector(ServerDeployment.getPodSelectorLabels(cr))
                 .withType("ClusterIP")
                 .build();
     }

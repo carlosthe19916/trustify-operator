@@ -10,13 +10,12 @@ import io.javaoperatorsdk.operator.api.reconciler.*;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.Dependent;
 import io.javaoperatorsdk.operator.processing.event.source.EventSource;
 import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEventSource;
+import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifyStatusCondition;
-import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
-import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
-import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
-import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaimActivationCondition;
+import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngress;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeploymentActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
@@ -25,9 +24,13 @@ import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
 import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecretActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBServiceActivationCondition;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
+import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
+import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaimActivationCondition;
+import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
 import org.trustify.operator.cdrs.v2alpha1.ui.deployment.UIDeployment;
-import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngress;
 import org.trustify.operator.cdrs.v2alpha1.ui.service.UIService;
+import org.trustify.operator.services.ClusterService;
 
 import java.time.Duration;
 import java.util.Map;
@@ -103,15 +106,12 @@ public class TrustifyReconciler implements Reconciler<Trustify>, ContextInitiali
     public static final String DEPLOYMENT_EVENT_SOURCE = "deploymentSource";
     public static final String SERVICE_EVENT_SOURCE = "serviceSource";
 
+    @Inject
+    ClusterService clusterService;
+
     @Override
     public void initContext(Trustify cr, Context<Trustify> context) {
-        final var labels = Map.of(
-                "app.kubernetes.io/managed-by", "trustify-operator",
-                "app.kubernetes.io/name", cr.getMetadata().getName(),
-                "app.kubernetes.io/part-of", cr.getMetadata().getName(),
-                "trustify-operator/cluster", org.trustify.operator.Constants.TRUSTI_NAME
-        );
-        context.managedDependentResourceContext().put(org.trustify.operator.Constants.CONTEXT_LABELS_KEY, labels);
+        context.managedDependentResourceContext().put(Constants.CLUSTER_SERVICE, clusterService);
     }
 
     @Override

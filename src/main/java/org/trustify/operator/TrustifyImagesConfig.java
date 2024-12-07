@@ -4,7 +4,7 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithName;
 
 @ConfigMapping(prefix = "related.image")
-public interface Config {
+public interface TrustifyImagesConfig {
 
     @WithName("ui")
     String uiImage();
