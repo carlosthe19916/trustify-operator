@@ -11,6 +11,7 @@ import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
@@ -31,6 +32,9 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
 
     @Inject
     TrustifyImagesConfig trustifyImagesConfig;
+
+    @Inject
+    TrustifyConfig trustifyConfig;
 
     @Inject
     TrustifyDistConfigurator distConfigurator;
@@ -192,17 +196,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                                 .build()
                                         )
                                         .withVolumeMounts(volumeMounts)
-                                        .withResources(new ResourceRequirementsBuilder()
-                                                .withRequests(Map.of(
-                                                        "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuRequest).orElse("50m")),
-                                                        "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryRequest).orElse("64Mi"))
-                                                ))
-                                                .withLimits(Map.of(
-                                                        "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuLimit).orElse("250m")),
-                                                        "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryLimit).orElse("256Mi"))
-                                                ))
-                                                .build()
-                                        )
+                                        .withResources(CRDUtils.getResourceRequirements(resourcesLimitSpec, trustifyConfig))
                                         .build()
                                 )
                                 .withVolumes(volumes)

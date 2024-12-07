@@ -1,8 +1,9 @@
 package org.trustify.operator.utils;
 
-import io.fabric8.kubernetes.api.model.OwnerReference;
-import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
+import io.fabric8.kubernetes.api.model.*;
+import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
+import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -21,7 +22,7 @@ public class CRDUtils {
                 .withController(true)
                 .build();
     }
-    
+
     public static <T, R> Optional<R> getValueFromSubSpec(T subSpec, Function<T, R> valueSupplier) {
         if (subSpec != null) {
             return Optional.ofNullable(valueSupplier.apply(subSpec));
@@ -39,5 +40,18 @@ public class CRDUtils {
             }
         });
         return result;
+    }
+
+    public static ResourceRequirements getResourceRequirements(TrustifySpec.ResourcesLimitSpec resourcesLimitSpec, TrustifyConfig trustifyConfig) {
+        return new ResourceRequirementsBuilder()
+                .withRequests(Map.of(
+                        "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuRequest).orElse(trustifyConfig.defaultRequestedCpu())),
+                        "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryRequest).orElse(trustifyConfig.defaultRequestedMemory()))
+                ))
+                .withLimits(Map.of(
+                        "cpu", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::cpuLimit).orElse(trustifyConfig.defaultLimitCpu())),
+                        "memory", new Quantity(CRDUtils.getValueFromSubSpec(resourcesLimitSpec, TrustifySpec.ResourcesLimitSpec::memoryLimit).orElse(trustifyConfig.defaultLimitMemory()))
+                ))
+                .build();
     }
 }

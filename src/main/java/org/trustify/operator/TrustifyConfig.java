@@ -8,4 +8,16 @@ public interface TrustifyConfig {
 
     @WithName("default-pvc-size")
     String defaultPvcSize();
+
+    @WithName("default-requested-cpu")
+    String defaultRequestedCpu();
+
+    @WithName("default-requested-memory")
+    String defaultRequestedMemory();
+
+    @WithName("default-limit-cpu")
+    String defaultLimitCpu();
+
+    @WithName("default-limit-memory")
+    String defaultLimitMemory();
 }
