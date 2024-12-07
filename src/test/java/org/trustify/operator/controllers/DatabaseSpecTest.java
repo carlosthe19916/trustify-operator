@@ -92,7 +92,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
 
                     verifyServer(trustify);
                     verifyUI(trustify);
-                    verifyIngress(trustify);
+                    verifyIngress(trustify, true);
                 });
     }
 
@@ -134,7 +134,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                     verifyDatabase(trustify);
                     verifyServer(trustify);
                     verifyUI(trustify);
-                    verifyIngress(trustify);
+                    verifyIngress(trustify, true);
                 });
     }
 

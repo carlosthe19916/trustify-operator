@@ -275,7 +275,7 @@ public abstract class ReconcilerBaseTest {
         Assertions.assertTrue(uiServicePorts.contains(8080), "UI service port not valid");
     }
 
-    protected void verifyIngress(Trustify cr) {
+    protected void verifyIngress(Trustify cr, boolean testBrowser) {
         // Ingress
         final var ingress = client.network().v1().ingresses()
                 .inNamespace(cr.getMetadata().getNamespace())
