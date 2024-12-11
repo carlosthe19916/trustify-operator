@@ -13,6 +13,8 @@ public class Constants {
     public static final String CRDS_VERSION = "v1alpha1";
 
     public static final String CLUSTER_SERVICE = "kubernetesCluster";
+    public static final String CONTEXT_KEYCLOAK_SERVER_SERVICE_KEY = "keycloakServerService";
+    public static final String CONTEXT_KEYCLOAK_REALM_SERVICE_KEY = "keycloakRealmService";
 
     public record Resource(String name, String labelSelector, Trustify cr) {
     }
@@ -40,6 +42,9 @@ public class Constants {
     public static final String TRUSTI_SERVER_NAME = "trustify-server";
     public static final String TRUSTI_DB_NAME = "trustify-db";
 
+    public static final String KEYCLOAK_NAME = "keycloak";
+    public static final String KEYCLOAK_DB_NAME = KEYCLOAK_NAME + "-db";
+
     //
     public static final String SERVICE_PROTOCOL = "TCP";
 
@@ -56,6 +61,10 @@ public class Constants {
     public static final String SERVER_DEPLOYMENT_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-deployment";
     public static final String SERVER_SERVICE_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-service";
 
+    public static final String OIDC_DB_PVC_SUFFIX = "-" + KEYCLOAK_DB_NAME + "-pvc";
+    public static final String OIDC_DB_SECRET_SUFFIX = "-" + KEYCLOAK_DB_NAME + "-secret";
+    public static final String OIDC_DB_DEPLOYMENT_SUFFIX = "-" + KEYCLOAK_DB_NAME + "-deployment";
+    public static final String OIDC_DB_SERVICE_SUFFIX = "-" + KEYCLOAK_DB_NAME + "-service";
 
     public static final String INGRESS_SUFFIX = "-" + TRUSTI_NAME + "-ingress";
 

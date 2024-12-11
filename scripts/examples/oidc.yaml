@@ -1,0 +1,7 @@
+apiVersion: "org.trustify/v1alpha1"
+kind: "Trustify"
+metadata:
+  name: myapp
+spec:
+  oidc:
+    enabled: true
