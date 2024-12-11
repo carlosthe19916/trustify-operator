@@ -1,4 +1,4 @@
-package org.trustify.operator.cdrs.v2alpha1.server.db.service;
+package org.trustify.operator.cdrs.v2alpha1.keycloak.db.service;
 
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
@@ -10,15 +10,15 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
+import org.trustify.operator.cdrs.v2alpha1.keycloak.db.deployment.KeycloakDBDeployment;
 
-@KubernetesDependent(labelSelector = DBService.LABEL_SELECTOR, resourceDiscriminator = DBServiceDiscriminator.class)
+@KubernetesDependent(labelSelector = KeycloakDBService.LABEL_SELECTOR, resourceDiscriminator = KeycloakDBServiceDiscriminator.class)
 @ApplicationScoped
-public class DBService extends CRUDKubernetesDependentResource<Service, Trustify> {
+public class KeycloakDBService extends CRUDKubernetesDependentResource<Service, Trustify> {
 
-    public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=db";
+    public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=keycloak";
 
-    public DBService() {
+    public KeycloakDBService() {
         super(Service.class);
     }
 
@@ -40,16 +40,16 @@ public class DBService extends CRUDKubernetesDependentResource<Service, Trustify
     private ServiceSpec getServiceSpec(Trustify cr) {
         return new ServiceSpecBuilder()
                 .addNewPort()
-                .withPort(DBDeployment.getDatabasePort(cr))
+                .withPort(KeycloakDBDeployment.getDatabasePort(cr))
                 .withProtocol(Constants.SERVICE_PROTOCOL)
                 .endPort()
-                .withSelector(DBDeployment.getPodSelectorLabels(cr))
+                .withSelector(KeycloakDBDeployment.getPodSelectorLabels(cr))
                 .withType("ClusterIP")
                 .build();
     }
 
     public static String getServiceName(Trustify cr) {
-        return cr.getMetadata().getName() + Constants.DB_SERVICE_SUFFIX;
+        return cr.getMetadata().getName() + Constants.OIDC_DB_SERVICE_SUFFIX;
     }
 
     public static String getServiceHost(Trustify cr) {

@@ -199,7 +199,7 @@
                 <artifactId>java-generator-maven-plugin</artifactId>
                 <version>${fabric8-plugin.version}</version>
                 <configuration>
-                    <source>${project.basedir}/src/main/resources/crd/keycloaks.k8s.keycloak.org-v1.crd.yml</source>
+                    <source>${project.basedir}/src/main/resources/crd</source>
                     <extraAnnotations>false</extraAnnotations>
                 </configuration>
                 <executions>
