@@ -57,7 +57,7 @@ public class DBSecret extends CRUDKubernetesDependentResource<Secret, Trustify> 
         return Constants.DB_SECRET_PASSWORD;
     }
 
-    public static SecretKeySelector getUsernameKeySelector(Trustify cr) {
+    public static SecretKeySelector getUsernameSecretKeySelector(Trustify cr) {
         return new SecretKeySelector(
                 getSecretUsernameKey(cr),
                 getSecretName(cr),
@@ -65,7 +65,7 @@ public class DBSecret extends CRUDKubernetesDependentResource<Secret, Trustify> 
         );
     }
 
-    public static SecretKeySelector getPasswordKeySelector(Trustify cr) {
+    public static SecretKeySelector getPasswordSecretKeySelector(Trustify cr) {
         return new SecretKeySelector(
                 getSecretPasswordKey(cr),
                 getSecretName(cr),

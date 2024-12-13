@@ -11,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.deployment.KeycloakDBDeployment;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 
 @KubernetesDependent(labelSelector = KeycloakDBService.LABEL_SELECTOR, resourceDiscriminator = KeycloakDBServiceDiscriminator.class)
 @ApplicationScoped
@@ -50,6 +51,10 @@ public class KeycloakDBService extends CRUDKubernetesDependentResource<Service, 
 
     public static String getServiceName(Trustify cr) {
         return cr.getMetadata().getName() + Constants.OIDC_DB_SERVICE_SUFFIX;
+    }
+
+    public static int getServicePort(Trustify cr) {
+        return KeycloakDBDeployment.getDatabasePort(cr);
     }
 
     public static String getServiceHost(Trustify cr) {

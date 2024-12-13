@@ -24,8 +24,7 @@ public class KeycloakUtils {
 
         return !Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.databaseSpec()))
-                .map(TrustifySpec.DatabaseSpec::externalDatabase)
+                .map(TrustifySpec.EmbeddedOidcSpec::externalDatabase)
                 .orElse(false);
     }
 

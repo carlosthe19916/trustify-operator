@@ -75,11 +75,12 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
         String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(trustifyImagesConfig.dbImage());
         String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
-        TrustifySpec.DatabaseSpec databaseSpec = Optional.ofNullable(cr.getSpec().oidcSpec())
+
+        TrustifySpec.EmbeddedDatabaseSpec databaseSpec = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.databaseSpec()))
+                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.embeddedDatabaseSpec()))
                 .orElse(null);
-        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(databaseSpec, TrustifySpec.DatabaseSpec::resourceLimits)
+        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(databaseSpec, TrustifySpec.EmbeddedDatabaseSpec::resourceLimits)
                 .orElse(null);
 
         return new DeploymentSpecBuilder()
@@ -163,14 +164,14 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
                 new EnvVarBuilder()
                         .withName("POSTGRESQL_USER")
                         .withValueFrom(new EnvVarSourceBuilder()
-                                .withSecretKeyRef(getUsernameSecretKeySelector(cr))
+                                .withSecretKeyRef(KeycloakDBSecret.getUsernameKeySelector(cr))
                                 .build()
                         )
                         .build(),
                 new EnvVarBuilder()
                         .withName("POSTGRESQL_PASSWORD")
                         .withValueFrom(new EnvVarSourceBuilder()
-                                .withSecretKeyRef(getPasswordSecretKeySelector(cr))
+                                .withSecretKeyRef(KeycloakDBSecret.getPasswordKeySelector(cr))
                                 .build()
                         )
                         .build(),
@@ -191,51 +192,12 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
         );
     }
 
-    public static SecretKeySelector getUsernameSecretKeySelector(Trustify cr) {
-        return Optional.ofNullable(cr.getSpec().oidcSpec())
-                .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.databaseSpec()))
-                .map(TrustifySpec.DatabaseSpec::usernameSecret)
-                .map(secret -> new SecretKeySelectorBuilder()
-                        .withName(secret.getName())
-                        .withKey(secret.getKey())
-                        .withOptional(false)
-                        .build()
-                )
-                .orElseGet(() -> new SecretKeySelectorBuilder()
-                        .withName(KeycloakDBSecret.getSecretName(cr))
-                        .withKey(Constants.DB_SECRET_USERNAME)
-                        .withOptional(false)
-                        .build()
-                );
-    }
-
-    public static SecretKeySelector getPasswordSecretKeySelector(Trustify cr) {
-        return Optional.ofNullable(cr.getSpec().oidcSpec())
-                .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.databaseSpec()))
-                .map(TrustifySpec.DatabaseSpec::passwordSecret)
-                .map(secret -> new SecretKeySelectorBuilder()
-                        .withName(secret.getName())
-                        .withKey(secret.getKey())
-                        .withOptional(false)
-                        .build()
-                )
-                .orElseGet(() -> new SecretKeySelectorBuilder()
-                        .withName(KeycloakDBSecret.getSecretName(cr))
-                        .withKey(Constants.DB_SECRET_PASSWORD)
-                        .withOptional(false)
-                        .build()
-                );
-    }
-
     public static String getDatabaseName(Trustify cr) {
-        return Optional.ofNullable(cr.getSpec().databaseSpec())
-                .map(TrustifySpec.DatabaseSpec::name)
-                .orElse(Constants.DB_NAME);
+        return "keycloak";
     }
 
     public static Integer getDatabasePort(Trustify cr) {
         return Constants.DB_PORT;
     }
+
 }

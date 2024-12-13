@@ -69,17 +69,7 @@ public record TrustifySpec(
         );
     }
 
-    // TODO Refactor this spec as external DBs for Keycloak can have the "vendor" field and "pvcSize" does not necessarily belongs here
-    public record DatabaseSpec(
-            @JsonPropertyDescription("Use external database.")
-            boolean externalDatabase,
-
-            @JsonPropertyDescription("Size of the PVC to create. Valid only if externalDatabase=false")
-            String pvcSize,
-
-            @JsonPropertyDescription("In this section you can configure resource limits settings. Valid only if externalDatabase=false")
-            ResourcesLimitSpec resourceLimits,
-
+    public record ExternalDatabaseSpec(
             @JsonPropertyDescription("The reference to a secret holding the username of the database user.")
             SecretKeySelector usernameSecret,
 
@@ -94,6 +84,27 @@ public record TrustifySpec(
 
             @JsonPropertyDescription("The database name.")
             String name
+    ) {
+    }
+
+    public record EmbeddedDatabaseSpec(
+            @JsonPropertyDescription("Size of the PVC to create. Valid only if externalDatabase=false")
+            String pvcSize,
+
+            @JsonPropertyDescription("In this section you can configure resource limits settings. Valid only if externalDatabase=false")
+            ResourcesLimitSpec resourceLimits
+    ) {
+    }
+
+    public record DatabaseSpec(
+            @JsonPropertyDescription("Use external database.")
+            boolean externalDatabase,
+
+            @JsonProperty("external")
+            ExternalDatabaseSpec externalDatabaseSpec,
+
+            @JsonProperty("embedded")
+            EmbeddedDatabaseSpec embeddedDatabaseSpec
     ) {
     }
 
@@ -123,12 +134,38 @@ public record TrustifySpec(
         }
     }
 
+    public record ExternalOidcDatabaseSpec(
+            @JsonPropertyDescription("The database vendor. E.g. 'postgres'")
+            String vendor,
+
+            @JsonPropertyDescription("The reference to a secret holding the username of the database user.")
+            SecretKeySelector usernameSecret,
+
+            @JsonPropertyDescription("The reference to a secret holding the password of the database user.")
+            SecretKeySelector passwordSecret,
+
+            @JsonPropertyDescription("The host of the database.")
+            String host,
+
+            @JsonPropertyDescription("The port of the database.")
+            String port,
+
+            @JsonPropertyDescription("The database name.")
+            String name
+    ) {
+    }
+
     public record EmbeddedOidcSpec(
-            @JsonProperty("db")
-            @JsonPropertyDescription("In this section you can find all properties related to connect to a database.")
-            DatabaseSpec databaseSpec,
             @JsonPropertyDescription("A secret containing the TLS configuration for OIDC - HTTPS. Reference: https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets.")
-            String tlsSecret
+            String tlsSecret,
+
+            boolean externalDatabase,
+
+            @JsonProperty("external")
+            ExternalOidcDatabaseSpec externalDatabaseSpec,
+
+            @JsonProperty("embedded")
+            EmbeddedDatabaseSpec embeddedDatabaseSpec
     ) {
     }
 

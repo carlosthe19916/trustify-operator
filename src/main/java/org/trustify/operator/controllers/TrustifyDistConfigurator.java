@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
+import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
@@ -127,12 +128,12 @@ public class TrustifyDistConfigurator {
         List<EnvVar> envVars = Optional.ofNullable(cr.getSpec().databaseSpec())
                 .flatMap(databaseSpec -> {
                     if (databaseSpec.externalDatabase()) {
-                        List<EnvVar> envs = optionMapper(cr.getSpec())
-                                .mapOption("TRUSTD_DB_USER", spec -> databaseSpec.usernameSecret())
-                                .mapOption("TRUSTD_DB_PASSWORD", spec -> databaseSpec.passwordSecret())
-                                .mapOption("TRUSTD_DB_NAME", spec -> databaseSpec.name())
-                                .mapOption("TRUSTD_DB_HOST", spec -> databaseSpec.host())
-                                .mapOption("TRUSTD_DB_PORT", spec -> databaseSpec.port())
+                        List<EnvVar> envs = optionMapper(databaseSpec.externalDatabaseSpec())
+                                .mapOption("TRUSTD_DB_USER", TrustifySpec.ExternalDatabaseSpec::usernameSecret)
+                                .mapOption("TRUSTD_DB_PASSWORD", TrustifySpec.ExternalDatabaseSpec::passwordSecret)
+                                .mapOption("TRUSTD_DB_NAME", TrustifySpec.ExternalDatabaseSpec::name)
+                                .mapOption("TRUSTD_DB_HOST", TrustifySpec.ExternalDatabaseSpec::host)
+                                .mapOption("TRUSTD_DB_PORT", TrustifySpec.ExternalDatabaseSpec::port)
                                 .getEnvVars();
                         return Optional.of(envs);
                     } else {
@@ -140,8 +141,8 @@ public class TrustifyDistConfigurator {
                     }
                 })
                 .orElseGet(() -> optionMapper(cr.getSpec())
-                        .mapOption("TRUSTD_DB_USER", spec -> DBDeployment.getUsernameSecretKeySelector(cr))
-                        .mapOption("TRUSTD_DB_PASSWORD", spec -> DBDeployment.getPasswordSecretKeySelector(cr))
+                        .mapOption("TRUSTD_DB_USER", spec -> DBSecret.getUsernameSecretKeySelector(cr))
+                        .mapOption("TRUSTD_DB_PASSWORD", spec -> DBSecret.getPasswordSecretKeySelector(cr))
                         .mapOption("TRUSTD_DB_NAME", spec -> DBDeployment.getDatabaseName(cr))
                         .mapOption("TRUSTD_DB_HOST", spec -> DBService.getServiceHost(cr))
                         .mapOption("TRUSTD_DB_PORT", spec -> DBDeployment.getDatabasePort(cr))

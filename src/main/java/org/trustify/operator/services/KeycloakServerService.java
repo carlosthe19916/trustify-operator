@@ -17,7 +17,10 @@ import org.trustify.operator.cdrs.v2alpha1.keycloak.db.secret.KeycloakDBSecret;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.service.KeycloakDBService;
 import org.trustify.operator.utils.CRDUtils;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @ApplicationScoped
 public class KeycloakServerService {
@@ -64,15 +67,17 @@ public class KeycloakServerService {
                 });
 
         // Database
+
         Db dbSpec = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.databaseSpec()))
-                .flatMap(databaseSpec -> {
+                .flatMap(embeddedOidcSpec -> {
                     Db db = null;
-                    if (databaseSpec.externalDatabase()) {
+                    if (embeddedOidcSpec.externalDatabase()) {
+                        TrustifySpec.ExternalOidcDatabaseSpec databaseSpec = embeddedOidcSpec.externalDatabaseSpec();
+
                         db = new Db();
 
-                        db.setVendor("postgres");
+                        db.setVendor(databaseSpec.vendor());
                         db.setHost(databaseSpec.host());
                         db.setPort(Long.parseLong(databaseSpec.port()));
                         db.setDatabase(databaseSpec.name());
@@ -93,8 +98,8 @@ public class KeycloakServerService {
                     Db db = new Db();
 
                     db.setVendor("postgres");
-                    db.setHost(KeycloakDBService.getServiceName(cr));
-                    db.setPort(5432L);
+                    db.setHost(KeycloakDBService.getServiceHost(cr));
+                    db.setPort((long) KeycloakDBService.getServicePort(cr));
                     db.setDatabase(KeycloakDBDeployment.getDatabaseName(cr));
 
                     SecretKeySelector usernameKeySelector = KeycloakDBSecret.getUsernameKeySelector(cr);

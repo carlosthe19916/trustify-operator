@@ -26,7 +26,7 @@ public class K3sResource implements QuarkusTestResourceLifecycleManager {
     @Override
     public Map<String, String> start() {
         Map<String, String> result = new HashMap<>();
-        result.put("quarkus.kubernetes.namespace", "trustify-operator1");
+        result.put("quarkus.kubernetes.namespace", "trustify-operator");
 
         String kubeConfigYaml;
         Optional<String> hostKubernetesConfigFile = Optional.ofNullable(System.getenv(HOST_KUBERNETES_CONFIG_FILE));

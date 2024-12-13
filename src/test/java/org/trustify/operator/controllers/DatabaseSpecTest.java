@@ -59,13 +59,14 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                 null,
                 new TrustifySpec.DatabaseSpec(
                         true,
-                        null,
-                        null,
-                        new SecretKeySelector("username", "postgresql-db", false),
-                        new SecretKeySelector("password", "postgresql-db", false),
-                        "postgresql-db." + getNamespaceName() + ".svc",
-                        "5432",
-                        "database"
+                        new TrustifySpec.ExternalDatabaseSpec(
+                                new SecretKeySelector("username", "postgresql-db", false),
+                                new SecretKeySelector("password", "postgresql-db", false),
+                                "postgresql-db." + getNamespaceName() + ".svc",
+                                "5432",
+                                "database"
+                        ),
+                        null
                 ),
                 null,
                 null,
@@ -108,11 +109,6 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                 null,
                 new TrustifySpec.DatabaseSpec(
                         false,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
                         null,
                         null
                 ),
