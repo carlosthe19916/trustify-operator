@@ -16,6 +16,9 @@ public class Constants {
     public static final String CONTEXT_KEYCLOAK_SERVER_SERVICE_KEY = "keycloakServerService";
     public static final String CONTEXT_KEYCLOAK_REALM_SERVICE_KEY = "keycloakRealmService";
 
+    public static final String KEYCLOAK = "keycloak";
+    public static final String KEYCLOAK_REALM_IMPORT = "keycloakRealmImport";
+
     public record Resource(String name, String labelSelector, Trustify cr) {
     }
 
@@ -57,6 +60,7 @@ public class Constants {
     public static final String UI_DEPLOYMENT_SUFFIX = "-" + TRUSTI_UI_NAME + "-deployment";
     public static final String UI_SERVICE_SUFFIX = "-" + TRUSTI_UI_NAME + "-service";
 
+    public static final String SERVER_CONFIG_MAP_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-configmap";
     public static final String SERVER_PVC_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-pvc";
     public static final String SERVER_DEPLOYMENT_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-deployment";
     public static final String SERVER_SERVICE_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-service";

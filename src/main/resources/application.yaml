@@ -46,6 +46,8 @@ related:
     pull-policy: Always
 # Quarkus config
 quarkus:
+  qute:
+    suffixes: yaml
   container-image:
     registry: ghcr.io
     tag: v${quarkus.application.version}

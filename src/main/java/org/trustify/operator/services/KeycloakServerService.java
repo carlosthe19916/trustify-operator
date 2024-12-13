@@ -196,6 +196,10 @@ public class KeycloakServerService {
         return Optional.ofNullable(keycloak);
     }
 
+    public static String getServiceHost(Trustify cr) {
+        return String.format("%s.%s.svc", cr.getMetadata().getName() + "-keycloak-service", cr.getMetadata().getNamespace());
+    }
+
     public void cleanupDependentResources(Trustify cr) {
         getCurrentInstance(cr).ifPresent(keycloak -> {
             k8sClient.resource(keycloak).delete();

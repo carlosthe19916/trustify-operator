@@ -1,0 +1,15 @@
+authentication:
+  clients:
+    {#each data.clients}
+    - issuerUrl: {it.serverUrl}
+      clientId: {it.clientId}
+      {#if it_index == 0 }
+      scopeMappings: &ScopeMappings
+        "create:document": [ "create.advisory", "create.importer", "create.metadata", "create.sbom", "create.weakness", "upload.dataset" ]
+        "read:document": [ "ai", "read.advisory", "read.importer", "read.metadata", "read.sbom", "read.weakness" ]
+        "update:document": [ "update.advisory", "update.importer", "update.metadata", "update.sbom", "update.weakness" ]
+        "delete:document": [ "delete.advisory", "delete.importer", "delete.metadata", "delete.sbom", "delete.vulnerability", "delete.weakness" ]
+      {#else}
+      scopeMappings: *ScopeMappings
+      {/if}
+    {/each}

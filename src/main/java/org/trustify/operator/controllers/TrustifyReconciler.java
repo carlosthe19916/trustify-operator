@@ -32,6 +32,8 @@ import org.trustify.operator.cdrs.v2alpha1.keycloak.service.KeycloakTlsService;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.service.KeycloakTlsServiceActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.service.KeycloakTlsServiceReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.utils.KeycloakUtils;
+import org.trustify.operator.cdrs.v2alpha1.server.configmap.ServerConfigMap;
+import org.trustify.operator.cdrs.v2alpha1.server.configmap.ServerConfigMapReconcilePreCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeploymentActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeploymentReadyPostCondition;
@@ -125,9 +127,14 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                         activationCondition = ServerStoragePersistentVolumeClaimActivationCondition.class
                 ),
                 @Dependent(
+                        name = "server-configmap",
+                        type = ServerConfigMap.class,
+                        reconcilePrecondition = ServerConfigMapReconcilePreCondition.class
+                ),
+                @Dependent(
                         name = "server-deployment",
                         type = ServerDeployment.class,
-                        dependsOn = {"server-service"},
+                        dependsOn = {"server-configmap", "server-service"},
                         reconcilePrecondition = ServerDeploymentReconcilePreCondition.class,
                         readyPostcondition = ServerDeployment.class
                 ),
@@ -140,7 +147,7 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                 @Dependent(
                         name = "ui-deployment",
                         type = UIDeployment.class,
-                        dependsOn = {"server-service"},
+                        dependsOn = {"server-deployment"},
                         readyPostcondition = UIDeployment.class
                 ),
                 @Dependent(
@@ -256,6 +263,10 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
                 logger.info("Waiting for the KeycloakRealmImport to be ready");
                 return Optional.of(UpdateControl.<Trustify>noUpdate().rescheduleAfter(5, TimeUnit.SECONDS));
             }
+
+            //
+            context.managedDependentResourceContext().put(Constants.KEYCLOAK, kcInstance);
+            context.managedDependentResourceContext().put(Constants.KEYCLOAK_REALM_IMPORT, realmImportInstance);
         }
 
         return Optional.empty();
