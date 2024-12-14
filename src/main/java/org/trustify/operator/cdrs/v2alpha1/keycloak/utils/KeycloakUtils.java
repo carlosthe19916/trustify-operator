@@ -12,7 +12,7 @@ public class KeycloakUtils {
 
     public static boolean isKeycloakRequired(Trustify cr) {
         return Optional.ofNullable(cr.getSpec().oidcSpec())
-                .map(oidcSpec -> oidcSpec.enabled() && (oidcSpec.type() == null || Objects.equals(oidcSpec.type(), TrustifySpec.OidcProviderType.EMBEDDED)))
+                .map(oidcSpec -> oidcSpec.enabled() && !oidcSpec.externalServer())
                 .orElse(false);
     }
 

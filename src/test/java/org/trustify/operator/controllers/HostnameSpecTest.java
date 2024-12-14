@@ -49,7 +49,7 @@ public class HostnameSpecTest extends ReconcilerBaseTest {
                     verifyDatabase(trustify);
                     verifyServer(trustify);
                     verifyUI(trustify);
-                    verifyIngress(trustify, false);
+                    verifyIngress(trustify, false, false);
 
                     // Ingress
                     final var ingress = client.network().v1().ingresses()

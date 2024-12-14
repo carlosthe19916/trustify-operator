@@ -6,12 +6,14 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
+import org.trustify.operator.cdrs.v2alpha1.server.configmap.ServerConfigMap;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.utils.ServerUtils;
+import org.trustify.operator.services.KeycloakRealmService;
 
 import java.util.*;
 import java.util.function.Function;
@@ -211,22 +213,66 @@ public class TrustifyDistConfigurator {
     }
 
     private void configureOidc(Config config, Trustify cr) {
-        List<EnvVar> envVars = Optional.ofNullable(cr.getSpec().oidcSpec())
-                .map(oidcSpec -> optionMapper(oidcSpec)
-                        .mapOption("AUTH_DISABLED", spec -> !spec.enabled())
-                        .mapOption("AUTHENTICATOR_OIDC_ISSUER_URL", oidcSpec1 -> oidcSpec1.externalOidcSpec().serverUrl())
-                        .mapOption("AUTHENTICATOR_OIDC_CLIENT_IDS", oidcSpec1 -> oidcSpec1.externalOidcSpec().uiClientId())
-                        .mapOption("UI_ISSUER_URL", oidcSpec1 -> oidcSpec1.externalOidcSpec().serverUrl())
-                        .mapOption("UI_CLIENT_ID", oidcSpec1 -> oidcSpec1.externalOidcSpec().uiClientId())
-                        .getEnvVars()
-                )
-                .orElseGet(() -> List.of(new EnvVarBuilder()
-                        .withName("AUTH_DISABLED")
-                        .withValue(Boolean.TRUE.toString())
-                        .build())
-                );
+        Optional.ofNullable(cr.getSpec().oidcSpec())
+                .flatMap(oidcSpec -> {
+                    if (!oidcSpec.enabled()) {
+                        return Optional.empty();
+                    }
 
-        config.allEnvVars.addAll(envVars);
+                    List<EnvVar> embeddedUIEnvVars;
+                    if (oidcSpec.externalServer()) {
+                        embeddedUIEnvVars = optionMapper(oidcSpec.externalOidcSpec())
+                                .mapOption("UI_ISSUER_URL", TrustifySpec.ExternalOidcSpec::serverUrl)
+                                .mapOption("UI_CLIENT_ID", TrustifySpec.ExternalOidcSpec::uiClientId)
+                                .getEnvVars();
+                    } else {
+                        embeddedUIEnvVars = optionMapper(oidcSpec.embeddedOidcSpec())
+//                                .mapOption("UI_ISSUER_URL", embeddedOidcSpec -> AppIngress.getHostname(cr))
+                                .mapOption("UI_CLIENT_ID", embeddedOidcSpec -> KeycloakRealmService.getUIClientName(cr))
+                                .getEnvVars();
+                    }
+                    config.allEnvVars.addAll(embeddedUIEnvVars);
+
+
+                    var authYaml = "/etc/config/auth.yaml";
+                    var authVolume = new VolumeBuilder()
+                            .withName("auth-pvol")
+                            .withConfigMap(new ConfigMapVolumeSourceBuilder()
+                                    .withName(ServerConfigMap.getConfigMapName(cr))
+                                    .withDefaultMode(420)
+                                    .build()
+                            )
+                            .build();
+                    var authVolumeMount = new VolumeMountBuilder()
+                            .withName(authVolume.getName())
+                            .withMountPath(authYaml)
+                            .withSubPath(ServerConfigMap.getAuthKey(cr))
+                            .build();
+                    config.allVolumes.add(authVolume);
+                    config.allVolumeMounts.add(authVolumeMount);
+
+                    config.allEnvVars.add(new EnvVarBuilder()
+                            .withName("AUTH_CONFIGURATION")
+                            .withValue(authYaml)
+                            .build()
+                    );
+
+                    config.allEnvVars.add(new EnvVarBuilder()
+                            .withName("AUTH_DISABLED")
+                            .withValue(Boolean.FALSE.toString())
+                            .build()
+                    );
+
+                    return Optional.of(true);
+                })
+                .orElseGet(() -> {
+                    config.allEnvVars.add(new EnvVarBuilder()
+                            .withName("AUTH_DISABLED")
+                            .withValue(Boolean.TRUE.toString())
+                            .build()
+                    );
+                    return true;
+                });
     }
 
     private <T> OptionMapper<T> optionMapper(T optionSpec) {

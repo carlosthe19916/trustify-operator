@@ -120,20 +120,6 @@ public record TrustifySpec(
     ) {
     }
 
-    public enum OidcProviderType {
-        EMBEDDED("embedded"),
-        EXTERNAL("external");
-        private final String value;
-
-        OidcProviderType(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-    }
-
     public record ExternalOidcDatabaseSpec(
             @JsonPropertyDescription("The database vendor. E.g. 'postgres'")
             String vendor,
@@ -161,10 +147,10 @@ public record TrustifySpec(
 
             boolean externalDatabase,
 
-            @JsonProperty("external")
+            @JsonProperty("externalDatabaseSpec")
             ExternalOidcDatabaseSpec externalDatabaseSpec,
 
-            @JsonProperty("embedded")
+            @JsonProperty("embeddedDatabaseSpec")
             EmbeddedDatabaseSpec embeddedDatabaseSpec
     ) {
     }
@@ -183,8 +169,7 @@ public record TrustifySpec(
             @JsonPropertyDescription("Enable Oidc Auth.")
             boolean enabled,
 
-            @JsonPropertyDescription("OIDC Provider type.")
-            OidcProviderType type,
+            boolean externalServer,
 
             @JsonProperty("embedded")
             EmbeddedOidcSpec embeddedOidcSpec,

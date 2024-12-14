@@ -1,0 +1,132 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: keycloak
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0.6
+          args: [ "start-dev" ]
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: "admin"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: "admin"
+            - name: KC_PROXY
+              value: "edge"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-config
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait
+          image: docker.io/alpine/curl:latest
+          env:
+            - name: TIMEOUT
+              value: "120"
+            - name: SERVER_URL
+              value: "http://keycloak:8080"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              attempt_counter=0
+              interval=3
+              max_attempts=$(($TIMEOUT/interval));
+
+              ## Wait until server is ready to continue
+              echo "Waiting for $SERVER_URL"
+              until (curl --output /dev/null --silent --head --fail $SERVER_URL); do
+                if [ ${attempt_counter} -eq ${max_attempts} ];then
+                  echo "Max attempts reached"
+                  exit 1
+                fi
+
+                printf '.'
+                attempt_counter=$(($attempt_counter+1))
+                sleep $interval
+              done
+              
+              echo "Server ready to listen"
+
+      containers:
+        - name: config
+          image: quay.io/keycloak/keycloak:26.0.6
+          env:
+            - name: TIMEOUT
+              value: "120"
+            - name: SERVER_URL
+              value: "http://keycloak:8080"
+            - name: REALM
+              value: master
+            - name: USERNAME
+              value: "admin"
+            - name: PASSWORD
+              value: "admin"
+          command:
+            - bash
+            - -c
+            - |
+              ## Login
+              /opt/keycloak/bin/kcadm.sh config credentials \
+              --server ${SERVER_URL} \
+              --user ${USERNAME} \
+              --password ${PASSWORD} \
+              --realm ${REALM}
+
+              # Realm
+              /opt/keycloak/bin/kcadm.sh create realms -s realm=trustify
+
+              # Clients
+              /opt/keycloak/bin/kcadm.sh create clients -r trustify -f - << EOF
+              {
+                "clientId": "frontend",
+                "publicClient": true
+              }
+              EOF
+              
+              /opt/keycloak/bin/kcadm.sh create clients -r trustify -f - << EOF
+              {
+                "clientId": "backend"
+              }
+              EOF
+      restartPolicy: Never
+  backoffLimit: 1

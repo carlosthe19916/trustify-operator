@@ -61,6 +61,7 @@ import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT_NAMESPACE;
 
@@ -184,11 +185,17 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
     @Inject
     KeycloakRealmService keycloakRealmService;
 
+    AtomicReference<Keycloak> keycloakInstance = new AtomicReference<>();
+    AtomicReference<KeycloakRealmImport> keycloakRealmImportInstance = new AtomicReference<>();
+
     @Override
     public void initContext(Trustify cr, Context<Trustify> context) {
         context.managedDependentResourceContext().put(Constants.CLUSTER_SERVICE, clusterService);
         context.managedDependentResourceContext().put(Constants.CONTEXT_KEYCLOAK_SERVER_SERVICE_KEY, keycloakServerService);
         context.managedDependentResourceContext().put(Constants.CONTEXT_KEYCLOAK_REALM_SERVICE_KEY, keycloakRealmService);
+
+        context.managedDependentResourceContext().put(Constants.KEYCLOAK, keycloakInstance);
+        context.managedDependentResourceContext().put(Constants.KEYCLOAK_REALM_IMPORT, keycloakRealmImportInstance);
     }
 
     @Override
@@ -250,6 +257,8 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
             if (!isKcInstanceReady) {
                 logger.info("Waiting for the Keycloak Server to be ready");
                 return Optional.of(UpdateControl.<Trustify>noUpdate().rescheduleAfter(5, TimeUnit.SECONDS));
+            } else {
+                keycloakInstance.set(kcInstance);
             }
 
             // Keycloak Realm
@@ -262,11 +271,9 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
             if (!isRealmImportInstanceReady) {
                 logger.info("Waiting for the KeycloakRealmImport to be ready");
                 return Optional.of(UpdateControl.<Trustify>noUpdate().rescheduleAfter(5, TimeUnit.SECONDS));
+            } else {
+                keycloakRealmImportInstance.set(realmImportInstance);
             }
-
-            //
-            context.managedDependentResourceContext().put(Constants.KEYCLOAK, kcInstance);
-            context.managedDependentResourceContext().put(Constants.KEYCLOAK_REALM_IMPORT, realmImportInstance);
         }
 
         return Optional.empty();

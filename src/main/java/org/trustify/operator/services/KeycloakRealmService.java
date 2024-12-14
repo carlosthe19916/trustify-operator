@@ -50,6 +50,14 @@ public class KeycloakRealmService {
         return "frontend";
     }
 
+    public static String getAppRealmUsername(Trustify cr) {
+        return "admin";
+    }
+
+    public static String getAppRealmPassword(Trustify cr) {
+        return "admin";
+    }
+
     public static String getRealmClientRelativePath(Trustify cr) {
         return String.format("%s/realms/%s", KeycloakServerService.RELATIVE_PATH, KeycloakRealmService.getRealmName(cr));
     }
@@ -144,7 +152,7 @@ public class KeycloakRealmService {
         ));
 
         // Admin User
-        adminUser.setUsername("admin");
+        adminUser.setUsername(getAppRealmUsername(cr));
         adminUser.setEmail("admin@trustify.org");
         adminUser.setFirstName("Admin");
         adminUser.setLastName("Admin");
@@ -158,7 +166,7 @@ public class KeycloakRealmService {
 
         Credentials adminCredentials = new Credentials();
         adminCredentials.setType("password");
-        adminCredentials.setValue("admin");
+        adminCredentials.setValue(getAppRealmPassword(cr));
         adminCredentials.setTemporary(false);
 
         adminUser.setCredentials(List.of(adminCredentials));

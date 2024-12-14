@@ -19,7 +19,6 @@ import org.trustify.operator.utils.CRDUtils;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -128,7 +127,7 @@ public class KeycloakServerService {
         Http httpSpec = spec.getHttp();
 
         Optional<Secret> tlsSecret = Optional.ofNullable(cr.getSpec().oidcSpec())
-                .flatMap(oidcSpec -> Objects.equals(oidcSpec.type(), TrustifySpec.OidcProviderType.EXTERNAL) ?
+                .flatMap(oidcSpec -> oidcSpec.externalServer() ?
                         Optional.ofNullable(oidcSpec.externalOidcSpec()).map(TrustifySpec.ExternalOidcSpec::tlsSecret) :
                         Optional.ofNullable(oidcSpec.embeddedOidcSpec()).map(TrustifySpec.EmbeddedOidcSpec::tlsSecret)
                 )
@@ -198,6 +197,12 @@ public class KeycloakServerService {
 
     public static String getServiceHost(Trustify cr) {
         return String.format("%s.%s.svc", cr.getMetadata().getName() + "-keycloak-service", cr.getMetadata().getNamespace());
+    }
+
+    public static String getServiceUrl(Trustify cr, Keycloak keycloak) {
+        String protocol = keycloak.getSpec().getHttp().getHttpEnabled() ? "http" : "https";
+        int port = keycloak.getSpec().getHttp().getHttpEnabled() ? 8080 : 8443;
+        return String.format("%s://%s:%s", protocol, KeycloakServerService.getServiceHost(cr), port);
     }
 
     public void cleanupDependentResources(Trustify cr) {

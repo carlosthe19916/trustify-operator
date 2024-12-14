@@ -18,9 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
@@ -31,7 +29,7 @@ import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
 import org.trustify.operator.cdrs.v2alpha1.ui.deployment.UIDeployment;
 import org.trustify.operator.cdrs.v2alpha1.ui.service.UIService;
-import org.trustify.operator.services.ClusterService;
+import org.trustify.operator.services.KeycloakRealmService;
 
 import java.time.Duration;
 import java.util.List;
@@ -275,7 +273,7 @@ public abstract class ReconcilerBaseTest {
         Assertions.assertTrue(uiServicePorts.contains(8080), "UI service port not valid");
     }
 
-    protected void verifyIngress(Trustify cr, boolean testBrowser) {
+    protected void verifyIngress(Trustify cr, boolean testBrowser, boolean authEnabled) {
         // Ingress
         final var ingress = client.network().v1().ingresses()
                 .inNamespace(cr.getMetadata().getNamespace())
@@ -295,11 +293,11 @@ public abstract class ReconcilerBaseTest {
         MatcherAssert.assertThat(serviceBackend.getPort().getNumber(), Matchers.is(8080));
 
         if (testBrowser) {
-            verifyInBrowser(cr);
+            verifyInBrowser(cr, authEnabled);
         }
     }
 
-    protected void verifyInBrowser(Trustify cr) {
+    protected void verifyInBrowser(Trustify cr, boolean authEnabled) {
         Optional<String> host = k3sClusterHost.or(() -> {
             Ingress ingress = client.network().v1().ingresses()
                     .inNamespace(cr.getMetadata().getNamespace())
@@ -340,23 +338,38 @@ public abstract class ReconcilerBaseTest {
         chromeOptions.setAcceptInsecureCerts(true);
 
         WebDriver driver = new ChromeDriver(chromeOptions);
+        driver.manage().window().setSize(new Dimension(1920, 961));
 
         try {
-            driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500));
+            driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1_000));
             driver.get(trustifyBaseUrl);
 
-            // Verify page is loaded
-            String title = driver.getTitle();
-            MatcherAssert.assertThat("Could not load index.html correctly", title, Matchers.equalTo("Trustification"));
+            // Login if required
+            if (authEnabled) {
+                Thread.sleep(1_000);
 
-            // Verify importers
-            driver.get(trustifyBaseUrl + "/importers");
+                WebElement username = driver.findElement(By.id("username"));
+                username.sendKeys(KeycloakRealmService.getAppRealmUsername(cr));
+
+                WebElement password = driver.findElement(By.id("password"));
+                password.sendKeys(KeycloakRealmService.getAppRealmPassword(cr));
+
+                password.sendKeys(Keys.ENTER);
+
+                Thread.sleep(1_000);
+            }
+
+            // Move to importers page
+            WebElement importersSidebar = driver.findElement(By.xpath("//a[text()='Importers']"));
+            MatcherAssert.assertThat("Could not find sidebar for importers", importersSidebar, Matchers.notNullValue());
+            importersSidebar.click();
 
             Optional<WebElement> pageTitle = driver.findElements(By.tagName("h1")).stream()
                     .filter(webElement -> Objects.equals(webElement.getText(), "Importers"))
                     .findAny();
             MatcherAssert.assertThat("Could not find Importers Page", pageTitle.isPresent(), Matchers.is(true));
 
+            // Verify importers
             WebElement importerTable = driver.findElement(By.xpath("//table[@aria-label='Importer table']"));
             List<WebElement> rows = importerTable.findElements(By.xpath("//tbody[@role='rowgroup']"));
             MatcherAssert.assertThat("Importers page did not load data from backend", rows.size(), Matchers.greaterThan(2));
@@ -365,6 +378,8 @@ public abstract class ReconcilerBaseTest {
                     .filter(webElement -> Objects.equals(webElement.getText(), "cve"))
                     .findAny();
             MatcherAssert.assertThat("CVE Importer was not found in table", cveRow.isPresent(), Matchers.is(true));
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             driver.quit();
         }

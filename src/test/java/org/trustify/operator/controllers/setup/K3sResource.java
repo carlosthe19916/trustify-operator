@@ -2,8 +2,10 @@ package org.trustify.operator.controllers.setup;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import org.jboss.logging.Logger;
+import org.testcontainers.containers.Container;
 import org.testcontainers.k3s.K3sContainer;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +17,7 @@ import java.util.Optional;
 public class K3sResource implements QuarkusTestResourceLifecycleManager {
     private static final Logger logger = Logger.getLogger(K3sConfigProducer.class);
 
-    static K3sContainer k3sContainer;
+    static K3sContainer container;
 
     // If ENV HOST_KUBERNETES_CONFIG_FILE is set then use the host k8s config
     public static final String HOST_KUBERNETES_CONFIG_FILE = "HOST_KUBERNETES_CONFIG_FILE";
@@ -41,13 +43,23 @@ public class K3sResource implements QuarkusTestResourceLifecycleManager {
             String rancherVersion = Optional.ofNullable(System.getenv(KUBERNETES_VERSION)).orElse("latest");
             logger.info("Using rancher/k3s:" + rancherVersion);
 
-            k3sContainer = new K3sContainer(DockerImageName.parse("rancher/k3s:" + rancherVersion))
+            container = new K3sContainer(DockerImageName.parse("rancher/k3s:" + rancherVersion))
                     .withCommand("server", "--tls-san=${DockerClientFactory.instance().dockerHostIpAddress()}")
                     .withExposedPorts(443, 6443);
-            k3sContainer.start();
+            container.start();
 
-            result.put("k3sClusterHost", "localhost:" + k3sContainer.getMappedPort(443));
-            kubeConfigYaml = k3sContainer.getKubeConfigYaml();
+            try {
+                container.copyFileToContainer(MountableFile.forClasspathResource("install-olm.sh", 777), "/tmp/install-olm.sh");
+                Container.ExecResult execResult = container.execInContainer("sh", "/tmp/install-olm.sh", "v0.30.0");
+                if (execResult.getExitCode() != 0) {
+                    throw new RuntimeException(execResult.getStdout());
+                }
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            result.put("k3sClusterHost", "localhost:" + container.getMappedPort(443));
+            kubeConfigYaml = container.getKubeConfigYaml();
         }
 
         result.put("kubeConfigYaml", kubeConfigYaml);
@@ -56,8 +68,8 @@ public class K3sResource implements QuarkusTestResourceLifecycleManager {
 
     @Override
     public void stop() {
-        if (k3sContainer != null) {
-            k3sContainer.stop();
+        if (container != null) {
+            container.stop();
         }
     }
 }

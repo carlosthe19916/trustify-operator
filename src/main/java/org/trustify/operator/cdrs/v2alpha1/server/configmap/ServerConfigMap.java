@@ -11,14 +11,13 @@ import org.jboss.logging.Logger;
 import org.keycloak.k8s.v2alpha1.Keycloak;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.services.KeycloakRealmService;
 import org.trustify.operator.services.KeycloakServerService;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 @KubernetesDependent(labelSelector = ServerConfigMap.LABEL_SELECTOR, resourceDiscriminator = ServerConfigMapDiscriminator.class)
 @ApplicationScoped
@@ -42,34 +41,28 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
         Optional<String> yamlFile = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> {
                     if (oidcSpec.enabled()) {
-                        TrustifySpec.OidcProviderType providerType = Objects.nonNull(oidcSpec.type()) ? oidcSpec.type() : TrustifySpec.OidcProviderType.EMBEDDED;
-                        switch (providerType) {
-                            case EXTERNAL -> {
-                                if (oidcSpec.externalOidcSpec() != null) {
-                                    AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
-                                            oidcSpec.externalOidcSpec().serverUrl(),
-                                            oidcSpec.externalOidcSpec().uiClientId()
-                                    )));
-                                    return Optional.of(AuthTemplate.auth(data).render());
-                                } else {
-                                    logger.error("Oidc provider type is EXTERNAL but no config for external oidc was provided");
-                                    return Optional.empty();
-                                }
-                            }
-                            case EMBEDDED -> {
-                                final var keycloakInstance = context.managedDependentResourceContext().getMandatory(Constants.KEYCLOAK, Keycloak.class);
-
-                                String protocol = keycloakInstance.getSpec().getHttp().getHttpEnabled() ? "http" : "https";
-                                int port = keycloakInstance.getSpec().getHttp().getHttpEnabled() ? 8080 : 8443;
-                                String keycloakRelativePath = KeycloakServerService.RELATIVE_PATH + "/realms/" + KeycloakRealmService.getRealmName(cr);
-                                String serverUrl = String.format("%s://%s:%s%s", protocol, KeycloakServerService.getServiceHost(cr), port, keycloakRelativePath);
-
+                        if (oidcSpec.externalServer()) {
+                            if (oidcSpec.externalOidcSpec() != null) {
                                 AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
-                                        serverUrl,
-                                        KeycloakRealmService.getUIClientName(cr)
+                                        oidcSpec.externalOidcSpec().serverUrl(),
+                                        oidcSpec.externalOidcSpec().uiClientId()
                                 )));
                                 return Optional.of(AuthTemplate.auth(data).render());
+                            } else {
+                                logger.error("Oidc provider type is EXTERNAL but no config for external oidc was provided");
+                                return Optional.empty();
                             }
+                        } else {
+                            AtomicReference<Keycloak> keycloakInstance = context.managedDependentResourceContext().getMandatory(Constants.KEYCLOAK, AtomicReference.class);
+
+                            String keycloakRelativePath = KeycloakRealmService.getRealmClientRelativePath(cr);
+                            String serverUrl = KeycloakServerService.getServiceUrl(cr, keycloakInstance.get()) + keycloakRelativePath;
+
+                            AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
+                                    serverUrl,
+                                    KeycloakRealmService.getUIClientName(cr)
+                            )));
+                            return Optional.of(AuthTemplate.auth(data).render());
                         }
                     }
                     return Optional.empty();

@@ -10,6 +10,7 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.keycloak.k8s.v2alpha1.Keycloak;
 import org.trustify.operator.Constants;
 import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.TrustifyImagesConfig;
@@ -17,12 +18,12 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
+import org.trustify.operator.services.KeycloakRealmService;
+import org.trustify.operator.services.KeycloakServerService;
 import org.trustify.operator.utils.CRDUtils;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 @KubernetesDependent(labelSelector = UIDeployment.LABEL_SELECTOR, resourceDiscriminator = UIDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -122,7 +123,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                                         .withName(Constants.TRUSTI_UI_NAME)
                                         .withImage(image)
                                         .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(getEnvVars(cr))
+                                        .withEnv(getEnvVars(cr, context))
                                         .withPorts(
                                                 new ContainerPortBuilder()
                                                         .withName("http")
@@ -170,12 +171,65 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                 .build();
     }
 
-    private List<EnvVar> getEnvVars(Trustify cr) {
-        return Arrays.asList(
-                new EnvVarBuilder()
+    private List<EnvVar> getEnvVars(Trustify cr, Context<Trustify> context) {
+        List<EnvVar> oidcEnvVars = Optional.ofNullable(cr.getSpec().oidcSpec())
+                .flatMap(oidcSpec -> {
+                    if (!oidcSpec.enabled()) {
+                        return Optional.empty();
+                    }
+
+                    List<EnvVar> envVars;
+                    if (oidcSpec.externalServer()) {
+                        envVars = Optional.ofNullable(oidcSpec.externalOidcSpec())
+                                .map(externalOidcSpec -> List.of(
+                                        new EnvVarBuilder()
+                                                .withName("OIDC_SERVER_URL")
+                                                .withValue(externalOidcSpec.serverUrl())
+                                                .build(),
+                                        new EnvVarBuilder()
+                                                .withName("OIDC_CLIENT_ID")
+                                                .withValue(externalOidcSpec.uiClientId())
+                                                .build()
+                                ))
+                                .orElseGet(ArrayList::new);
+                    } else {
+                        final AtomicReference<Keycloak> keycloakInstance = context.managedDependentResourceContext().getMandatory(Constants.KEYCLOAK, AtomicReference.class);
+                        envVars = List.of(
+                                new EnvVarBuilder()
+                                        .withName("OIDC_SERVER_URL")
+                                        .withValue(KeycloakServerService.getServiceUrl(cr, keycloakInstance.get()))
+                                        .build(),
+                                new EnvVarBuilder()
+                                        .withName("OIDC_CLIENT_ID")
+                                        .withValue(KeycloakRealmService.getUIClientName(cr))
+                                        .build(),
+                                new EnvVarBuilder()
+                                        .withName("OIDC_SERVER_IS_EMBEDDED")
+                                        .withValue(Boolean.TRUE.toString())
+                                        .build(),
+                                new EnvVarBuilder()
+                                        .withName("OIDC_SERVER_EMBEDDED_PATH")
+                                        .withValue(KeycloakRealmService.getRealmClientRelativePath(cr))
+                                        .build()
+                        );
+                    }
+
+                    List<EnvVar> result = new ArrayList<>();
+                    result.add(new EnvVarBuilder()
+                            .withName("AUTH_REQUIRED")
+                            .withValue(Boolean.TRUE.toString())
+                            .build()
+                    );
+                    result.addAll(envVars);
+                    return Optional.of(result);
+                })
+                .orElseGet(() -> List.of(new EnvVarBuilder()
                         .withName("AUTH_REQUIRED")
-                        .withValue("false")
-                        .build(),
+                        .withValue(Boolean.FALSE.toString())
+                        .build()
+                ));
+
+        List<EnvVar> envVars = Arrays.asList(
                 new EnvVarBuilder()
                         .withName("ANALYTICS_ENABLED")
                         .withValue("false")
@@ -193,6 +247,12 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                         .withValue("/opt/app-root/src/ca.crt")
                         .build()
         );
+
+        List<EnvVar> result = new ArrayList<>();
+        result.addAll(oidcEnvVars);
+        result.addAll(envVars);
+
+        return result;
     }
 
     public static String getDeploymentName(Trustify cr) {

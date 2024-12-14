@@ -8,6 +8,7 @@ import org.trustify.operator.services.KeycloakRealmService;
 import org.trustify.operator.services.KeycloakServerService;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class ServerReconcilePreCondition {
 
@@ -31,7 +32,12 @@ public abstract class ServerReconcilePreCondition {
             Boolean isKeycloakImportReady = keycloakRealmService.get().getCurrentInstance(cr)
                     .map(KeycloakUtils::isKeycloakRealmImportReady)
                     .orElse(false);
-            return isKeycloakImportReady;
+            if (!isKeycloakImportReady) {
+                return false;
+            }
+
+            Optional<AtomicReference> keycloakInstance = context.managedDependentResourceContext().get(Constants.KEYCLOAK, AtomicReference.class);
+            return keycloakInstance.isPresent() && keycloakInstance.get().get() != null;
         }
 
         return true;

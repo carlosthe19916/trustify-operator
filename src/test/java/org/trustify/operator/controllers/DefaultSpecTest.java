@@ -26,7 +26,7 @@ public class DefaultSpecTest extends ReconcilerBaseTest {
                     verifyDatabase(trustify);
                     verifyServer(trustify);
                     verifyUI(trustify);
-                    verifyIngress(trustify, true);
+                    verifyIngress(trustify, true, false);
                 });
     }
 

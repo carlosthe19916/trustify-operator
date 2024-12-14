@@ -34,7 +34,7 @@ EOF
 
 ```shell
 minikube start --addons=ingress,dashboard
-curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.22.0/install.sh | bash -s v0.28.0
+curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.22.0/install.sh | bash -s v0.30.0
 ```
 
 - Setup ServiceAccount + Role + RoleBinding:
