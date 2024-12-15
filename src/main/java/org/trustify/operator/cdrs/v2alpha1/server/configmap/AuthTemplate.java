@@ -8,7 +8,7 @@ import java.util.List;
 @CheckedTemplate
 public class AuthTemplate {
 
-    public record Client(String serverUrl, String clientId) {
+    public record Client(String serverUrl, String clientId, List<String> tlsCaCertificates) {
     }
 
     public record Data(List<Client> clients) {

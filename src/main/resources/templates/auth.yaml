@@ -3,6 +3,12 @@ authentication:
     {#each data.clients}
     - issuerUrl: {it.serverUrl}
       clientId: {it.clientId}
+      {#if it.tlsCaCertificates }
+      tlsCaCertificates:
+      {#for certificate in it.tlsCaCertificates}
+        - {certificate}
+      {/for}
+      {/if}
       {#if it_index == 0 }
       scopeMappings: &ScopeMappings
         "create:document": [ "create.advisory", "create.importer", "create.metadata", "create.sbom", "create.weakness", "upload.dataset" ]

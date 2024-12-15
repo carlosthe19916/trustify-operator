@@ -45,7 +45,7 @@ public class K3sResource implements QuarkusTestResourceLifecycleManager {
 
             container = new K3sContainer(DockerImageName.parse("rancher/k3s:" + rancherVersion))
                     .withCommand("server", "--tls-san=${DockerClientFactory.instance().dockerHostIpAddress()}")
-                    .withExposedPorts(443, 6443);
+                    .withExposedPorts(80, 443, 6443);
             container.start();
 
             try {

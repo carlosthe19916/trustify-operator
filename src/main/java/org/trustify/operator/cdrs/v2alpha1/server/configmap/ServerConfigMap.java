@@ -45,7 +45,8 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
                             if (oidcSpec.externalOidcSpec() != null) {
                                 AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
                                         oidcSpec.externalOidcSpec().serverUrl(),
-                                        oidcSpec.externalOidcSpec().uiClientId()
+                                        oidcSpec.externalOidcSpec().uiClientId(),
+                                        List.of(getAuthTlsCaCertificatePath(cr))
                                 )));
                                 return Optional.of(AuthTemplate.auth(data).render());
                             } else {
@@ -60,7 +61,8 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
 
                             AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
                                     serverUrl,
-                                    KeycloakRealmService.getUIClientName(cr)
+                                    KeycloakRealmService.getUIClientName(cr),
+                                    List.of(getAuthTlsCaCertificatePath(cr))
                             )));
                             return Optional.of(AuthTemplate.auth(data).render());
                         }
@@ -98,4 +100,11 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
         return "auth.yaml";
     }
 
+    public static String getAuthTlsCaCertificateDirectory(Trustify cr) {
+        return "/opt/trustify/tls-oidc";
+    }
+
+    public static String getAuthTlsCaCertificatePath(Trustify cr) {
+        return getAuthTlsCaCertificateDirectory(cr) + "/tls.crt";
+    }
 }
