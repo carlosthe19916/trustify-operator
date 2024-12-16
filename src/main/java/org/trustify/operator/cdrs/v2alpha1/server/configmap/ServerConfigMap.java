@@ -2,18 +2,24 @@ package org.trustify.operator.cdrs.v2alpha1.server.configmap;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.Creator;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import org.keycloak.k8s.v2alpha1.Keycloak;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
+import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.services.KeycloakRealmService;
 import org.trustify.operator.services.KeycloakServerService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +34,9 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
 
     private static final Logger logger = Logger.getLogger(ServerConfigMap.class);
 
+    @Inject
+    KubernetesClient k8sClient;
+
     public ServerConfigMap() {
         super(ConfigMap.class);
     }
@@ -41,12 +50,28 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
         Optional<String> yamlFile = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> {
                     if (oidcSpec.enabled()) {
+                        Optional<String> oidcSecretName = oidcSpec.externalServer() ?
+                                Optional.ofNullable(oidcSpec.externalOidcSpec()).map(TrustifySpec.ExternalOidcSpec::tlsSecret) :
+                                Optional.ofNullable(oidcSpec.embeddedOidcSpec()).map(TrustifySpec.EmbeddedOidcSpec::tlsSecret);
+
+                        Optional<Secret> oidcSecret = oidcSecretName.map(name -> {
+                            Secret secret = new SecretBuilder()
+                                    .withNewMetadata()
+                                    .withName(name)
+                                    .endMetadata()
+                                    .build();
+                            return k8sClient.resource(secret)
+                                    .inNamespace(cr.getMetadata().getNamespace())
+                                    .get();
+                        });
+
+
                         if (oidcSpec.externalServer()) {
                             if (oidcSpec.externalOidcSpec() != null) {
                                 AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
                                         oidcSpec.externalOidcSpec().serverUrl(),
                                         oidcSpec.externalOidcSpec().uiClientId(),
-                                        List.of(getAuthTlsCaCertificatePath(cr))
+                                        oidcSecret.isPresent() ? List.of(getAuthTlsCaCertificatePath(cr)) : Collections.emptyList()
                                 )));
                                 return Optional.of(AuthTemplate.auth(data).render());
                             } else {
@@ -62,7 +87,7 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
                             AuthTemplate.Data data = new AuthTemplate.Data(List.of(new AuthTemplate.Client(
                                     serverUrl,
                                     KeycloakRealmService.getUIClientName(cr),
-                                    List.of(getAuthTlsCaCertificatePath(cr))
+                                    oidcSecret.isPresent() ? List.of(getAuthTlsCaCertificatePath(cr)) : Collections.emptyList()
                             )));
                             return Optional.of(AuthTemplate.auth(data).render());
                         }

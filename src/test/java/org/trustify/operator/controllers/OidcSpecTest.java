@@ -209,7 +209,9 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
-                null,
+                k3sClusterHost.map(k3sClusterHost -> new TrustifySpec.HostnameSpec(
+                        "https://" + k3sClusterHost
+                )).orElse(null),
                 null,
                 new TrustifySpec.OidcSpec(
                         true,

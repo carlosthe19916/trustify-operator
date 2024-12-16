@@ -1,5 +1,6 @@
 package org.trustify.operator.services;
 
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.openshift.api.model.operatorhub.v1.OperatorGroup;
 import io.fabric8.openshift.api.model.operatorhub.v1.OperatorGroupBuilder;
@@ -10,6 +11,7 @@ import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 
 import java.util.AbstractMap;
+import java.util.List;
 import java.util.Objects;
 
 @ApplicationScoped
@@ -49,6 +51,15 @@ public class KeycloakOperatorService {
     }
 
     public void createSubscription(Trustify cr) {
+        // List all CustomResourceDefinitions
+        List<CustomResourceDefinition> crds = k8sClient.apiextensions().v1().customResourceDefinitions().list().getItems();
+        boolean isOlmInstalled = crds.stream().anyMatch(crd -> "clusterserviceversions.operators.coreos.com".equals(crd.getMetadata().getName()));
+
+        if (!isOlmInstalled) {
+            throw new IllegalStateException("The Kubernetes Cluster does not have OLM");
+        }
+
+        // Operator group
         OperatorGroup operatorGroup = new OperatorGroupBuilder()
                 .withNewMetadata()
                 .withName("operatorgroup")

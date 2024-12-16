@@ -28,9 +28,6 @@ import org.trustify.operator.cdrs.v2alpha1.keycloak.db.secret.KeycloakDBSecret;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.secret.KeycloakDBSecretActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.service.KeycloakDBService;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.service.KeycloakDBServiceActivationCondition;
-import org.trustify.operator.cdrs.v2alpha1.keycloak.service.KeycloakTlsService;
-import org.trustify.operator.cdrs.v2alpha1.keycloak.service.KeycloakTlsServiceActivationCondition;
-import org.trustify.operator.cdrs.v2alpha1.keycloak.service.KeycloakTlsServiceReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.utils.KeycloakUtils;
 import org.trustify.operator.cdrs.v2alpha1.server.configmap.ServerConfigMap;
 import org.trustify.operator.cdrs.v2alpha1.server.configmap.ServerConfigMapReconcilePreCondition;
@@ -69,13 +66,6 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
         namespaces = WATCH_CURRENT_NAMESPACE,
         name = "trustify",
         dependents = {
-                @Dependent(
-                        name = "keycloak-tls",
-                        type = KeycloakTlsService.class,
-                        activationCondition = KeycloakTlsServiceActivationCondition.class,
-                        readyPostcondition = KeycloakTlsServiceReadyPostCondition.class
-                ),
-
                 @Dependent(
                         name = "keycloak-db-pvc",
                         type = KeycloakDBPersistentVolumeClaim.class,
@@ -225,17 +215,6 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
             }
 
             // Keycloak dependencies
-            KeycloakTlsServiceActivationCondition keycloakActivationCondition = new KeycloakTlsServiceActivationCondition();
-            boolean isKeycloakTlsEnabled = keycloakActivationCondition.isMet(null, cr, context);
-            if (isKeycloakTlsEnabled) {
-                KeycloakTlsServiceReadyPostCondition keycloakReadyCondition = new KeycloakTlsServiceReadyPostCondition();
-                boolean isKeycloakTlsReady = keycloakReadyCondition.isMet(null, cr, context);
-                if (!isKeycloakTlsReady) {
-                    logger.info("Waiting for the TLS Secrets for Keycloak to be created");
-                    return Optional.of(UpdateControl.<Trustify>noUpdate().rescheduleAfter(5, TimeUnit.SECONDS));
-                }
-            }
-
             KeycloakDBDeploymentActivationCondition keycloakDBActivationCondition = new KeycloakDBDeploymentActivationCondition();
             boolean isKeycloakDBEnabled = keycloakDBActivationCondition.isMet(null, cr, context);
             if (isKeycloakDBEnabled) {
