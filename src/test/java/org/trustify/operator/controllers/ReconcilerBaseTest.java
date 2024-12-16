@@ -378,6 +378,8 @@ public abstract class ReconcilerBaseTest {
                     .filter(webElement -> Objects.equals(webElement.getText(), "cve"))
                     .findAny();
             MatcherAssert.assertThat("CVE Importer was not found in table", cveRow.isPresent(), Matchers.is(true));
+        } catch (NoSuchElementException e) {
+            Assertions.fail("Could not find element in page page");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
