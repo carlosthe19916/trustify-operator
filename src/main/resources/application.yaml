@@ -7,29 +7,30 @@ trustify:
 "%dev":
   trustify:
     default-pvc-size: 1G
-    default-limit-cpu: 500m
-    default-limit-memory: 512Mi
+    default-limit-cpu: 200m
+    default-limit-memory: 256Mi
     keycloak-operator:
       resources:
         requests:
           memory: 256Mi
-          cpu: 0.5
+          cpu: 200m
         limits:
           memory: 512Mi
-          cpu: 1
+          cpu: 0.5
 "%test":
    trustify:
      default-pvc-size: 1G
-     default-limit-cpu: 500m
-     default-limit-memory: 512Mi
+     default-requested-memory: 1Mi
+     default-limit-cpu: 200m
+     default-limit-memory: 256Mi
      keycloak-operator:
        resources:
          requests:
-           memory: 256Mi
-           cpu: 0.5
+           memory: 1Mi
+           cpu: 200m
          limits:
            memory: 512Mi
-           cpu: 1
+           cpu: 0.5
 "%minikube":
   trustify:
     keycloak-operator:
