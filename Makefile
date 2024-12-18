@@ -182,6 +182,15 @@ catalog-push: ## Push a catalog image.
 start-minikube:
 	bash hack/start-minikube.sh
 
+.PHONY: start-kind
+start-kind:
+	kind create cluster --config scripts/kind/config.yaml
+	kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml
+
+.PHONY: start-crc
+start-crc:
+	crc start --cpus 8 --memory 32768 --disk-size 80
+
 .PHONY: install-trustify
 install-trustify:
 	bash hack/install-trustify.sh

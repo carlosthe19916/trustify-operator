@@ -312,7 +312,7 @@ public abstract class ReconcilerBaseTest {
                             .map(IngressRule::getHost)
                     );
 
-            // Minikube
+            // Minikube, Kind
             return ingressHost.or(() -> {
                 IngressLoadBalancerIngress ingressLoadBalancerIngress = client.network().v1().ingresses()
                         .inNamespace(cr.getMetadata().getNamespace())
@@ -325,7 +325,8 @@ public abstract class ReconcilerBaseTest {
                         .findFirst()
                         .orElse(null);
 
-                return Optional.ofNullable(ingressLoadBalancerIngress).map(IngressLoadBalancerIngress::getIp);
+                return Optional.ofNullable(ingressLoadBalancerIngress)
+                        .map(loadBalancer -> Objects.nonNull(loadBalancer.getIp()) ? loadBalancer.getIp() : loadBalancer.getHostname());
             });
         });
 
