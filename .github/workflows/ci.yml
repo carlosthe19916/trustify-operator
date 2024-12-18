@@ -40,7 +40,44 @@ jobs:
       - name: Test
         env:
           KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
-        run: mvn verify
+        run: mvn verify -Dgroups=heavy
+
+  kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "maven"
+      - name: Install Kind
+        run: |
+          go install sigs.k8s.io/kind@v0.26.0
+          make start-kind
+      - name: Test
+        env:
+          KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+        run: mvn verify -Dgroups=heavy
+
+  minikube:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "maven"
+      - name: start minikube
+        uses: .github/actions/start-minikube
+        with:
+          memory: "max"
+          cpus: "max"
+      - name: Test
+        env:
+          KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+        run: mvn verify -Dgroups=heavy
 
   crc:
     runs-on: ubuntu-latest
