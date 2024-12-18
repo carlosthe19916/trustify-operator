@@ -70,7 +70,7 @@ jobs:
           java-version: "21"
           cache: "maven"
       - name: start minikube
-        uses: .github/actions/start-minikube
+        uses: trustification/trustify-operator/.github/actions/start-minikube@main
         with:
           memory: "max"
           cpus: "max"
