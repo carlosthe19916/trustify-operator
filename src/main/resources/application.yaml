@@ -3,41 +3,13 @@ trustify:
   default-requested-cpu: 50m
   default-requested-memory: 64Mi
   default-limit-cpu: 1
-  default-limit-memory: 0.5Gi
+  default-limit-memory: 512Mi
 "%dev":
   trustify:
     default-pvc-size: 1G
-    default-limit-cpu: 200m
-    default-limit-memory: 256Mi
-    keycloak-operator:
-      resources:
-        requests:
-          memory: 256Mi
-          cpu: 200m
-        limits:
-          memory: 512Mi
-          cpu: 0.5
 "%test":
-   trustify:
-     default-pvc-size: 1G
-     default-requested-memory: 1Mi
-     default-limit-cpu: 200m
-     default-limit-memory: 256Mi
-     keycloak-operator:
-       resources:
-         requests:
-           memory: 1Mi
-           cpu: 200m
-         limits:
-           memory: 512Mi
-           cpu: 0.5
-"%minikube":
   trustify:
-    keycloak-operator:
-      subscription:
-        namespace: olm
-        source: operatorhubio-catalog
-        channel: fast
+    default-pvc-size: 1G
 # Operator config
 related:
   image:

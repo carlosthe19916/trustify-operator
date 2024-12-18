@@ -330,7 +330,7 @@ public abstract class ReconcilerBaseTest {
         });
 
         MatcherAssert.assertThat("Could not find Cluster Host/IP", host.isPresent(), Matchers.is(true));
-        String trustifyBaseUrl = "https://" + host.get();
+        String trustifyBaseUrl = "https://" + host.orElse(null);
 
         // Selenium
         ChromeOptions chromeOptions = new ChromeOptions();
