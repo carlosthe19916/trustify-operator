@@ -5,6 +5,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
@@ -198,6 +199,7 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 });
     }
 
+    @Tag(TestTags.heavy)
     @Test
     public void embeddedServer() throws InterruptedException {
         // Create

@@ -58,7 +58,9 @@ public class K3sResource implements QuarkusTestResourceLifecycleManager {
                 throw new RuntimeException(e);
             }
 
-            result.put("k3sClusterHost", container.getHost() + ":" + container.getMappedPort(443));
+            result.put("k3sHost", container.getHost());
+            result.put("k3sPort", String.valueOf(container.getMappedPort(443)));
+
             kubeConfigYaml = container.getKubeConfigYaml();
         }
 
