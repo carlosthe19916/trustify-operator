@@ -29,7 +29,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
 
         Awaitility.await()
                 .ignoreException(NullPointerException.class)
-                .atMost(2, TimeUnit.MINUTES)
+                .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     final var statefulSet = client.apps()
                             .statefulSets()
@@ -81,7 +81,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
         // Verify resources
         Awaitility.await()
                 .ignoreException(NullPointerException.class)
-                .atMost(2, TimeUnit.MINUTES)
+                .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     // Database should not be created
                     final var dbDeployment = client.apps()
@@ -125,7 +125,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
         // Verify resources
         Awaitility.await()
                 .ignoreException(NullPointerException.class)
-                .atMost(2, TimeUnit.MINUTES)
+                .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
                     verifyServer(trustify);

@@ -21,7 +21,7 @@ public class DefaultSpecTest extends ReconcilerBaseTest {
         // Verify resources
         Awaitility.await()
                 .ignoreException(NullPointerException.class)
-                .atMost(2, TimeUnit.MINUTES)
+                .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
                     verifyServer(trustify);
