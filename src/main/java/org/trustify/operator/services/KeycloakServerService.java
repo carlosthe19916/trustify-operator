@@ -51,8 +51,8 @@ public class KeycloakServerService {
         KeycloakSpec spec = keycloak.getSpec();
         spec.setInstances(1L);
 
-        spec.setImage("quay.io/cferiavi/keycloak:latest");
-        spec.setStartOptimized(true);
+//        spec.setImage("quay.io/cferiavi/keycloak:latest");
+//        spec.setStartOptimized(true);
 
         // Resources
         trustifyConfig.keycloakResources()
