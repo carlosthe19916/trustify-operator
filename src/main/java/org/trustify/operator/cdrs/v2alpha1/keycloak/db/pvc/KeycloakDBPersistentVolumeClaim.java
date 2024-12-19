@@ -37,7 +37,8 @@ public class KeycloakDBPersistentVolumeClaim extends CRUDKubernetesDependentReso
     private PersistentVolumeClaim newPersistentVolumeClaim(Trustify cr, Context<Trustify> context) {
         String pvcStorageSize = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.embeddedDatabaseSpec()))
+                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.databaseSpec()))
+                .flatMap(databaseSpec -> Optional.ofNullable(databaseSpec.embeddedDatabaseSpec()))
                 .map(TrustifySpec.EmbeddedDatabaseSpec::pvcSize)
                 .orElse(trustifyConfig.defaultPvcSize());
 

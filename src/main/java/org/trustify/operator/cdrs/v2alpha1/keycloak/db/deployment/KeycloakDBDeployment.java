@@ -78,7 +78,8 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
 
         TrustifySpec.EmbeddedDatabaseSpec databaseSpec = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.embeddedDatabaseSpec()))
+                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.databaseSpec()))
+                .flatMap(dbSpec -> Optional.ofNullable(dbSpec.embeddedDatabaseSpec()))
                 .orElse(null);
         TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(databaseSpec, TrustifySpec.EmbeddedDatabaseSpec::resourceLimits)
                 .orElse(null);

@@ -70,10 +70,11 @@ public class KeycloakServerService {
         // Database
         Db dbSpec = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> {
+                .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.databaseSpec()))
+                .flatMap(embeddedDbSpec -> {
                     Db db = null;
-                    if (embeddedOidcSpec.externalDatabase()) {
-                        TrustifySpec.ExternalOidcDatabaseSpec databaseSpec = embeddedOidcSpec.externalDatabaseSpec();
+                    if (embeddedDbSpec.externalDatabase()) {
+                        TrustifySpec.ExternalOidcDatabaseSpec databaseSpec = embeddedDbSpec.externalDatabaseSpec();
 
                         db = new Db();
 

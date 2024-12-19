@@ -14,6 +14,7 @@ import org.trustify.operator.utils.CRDUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @KubernetesDependent(labelSelector = AppIngress.LABEL_SELECTOR, resourceDiscriminator = AppIngressDiscriminator.class)
 @ApplicationScoped
@@ -77,7 +78,8 @@ public class AppIngress extends CRUDKubernetesDependentResource<Ingress, Trustif
     }
 
     protected IngressTLS getIngressTLS(Trustify cr) {
-        String tlsSecretName = CRDUtils.getValueFromSubSpec(cr.getSpec().httpSpec(), TrustifySpec.HttpSpec::tlsSecret)
+        String tlsSecretName = Optional.ofNullable(cr.getSpec().httpSpec())
+                .map(TrustifySpec.HttpSpec::tlsSecret)
                 .orElse(null);
 
         return new IngressTLSBuilder()

@@ -140,6 +140,9 @@ public class TrustifyDistConfigurator {
                                 .mapOption("TRUSTD_DB_NAME", TrustifySpec.ExternalDatabaseSpec::name)
                                 .mapOption("TRUSTD_DB_HOST", TrustifySpec.ExternalDatabaseSpec::host)
                                 .mapOption("TRUSTD_DB_PORT", TrustifySpec.ExternalDatabaseSpec::port)
+                                .mapOption("TRUSTD_DB_MIN_CONN", TrustifySpec.ExternalDatabaseSpec::poolMinSize)
+                                .mapOption("TRUSTD_DB_MAX_CONN", TrustifySpec.ExternalDatabaseSpec::poolMaxSize)
+                                .mapOption("TRUSTD_DB_SSLMODE", TrustifySpec.ExternalDatabaseSpec::sslMode)
                                 .getEnvVars();
                         return Optional.of(envs);
                     } else {
