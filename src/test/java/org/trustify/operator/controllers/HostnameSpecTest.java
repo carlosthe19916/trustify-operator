@@ -29,10 +29,10 @@ public class HostnameSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
                 new TrustifySpec.HostnameSpec(
                         host
                 ),
-                null,
                 null,
                 null,
                 null,

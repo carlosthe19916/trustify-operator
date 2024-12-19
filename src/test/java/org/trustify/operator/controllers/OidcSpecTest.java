@@ -137,12 +137,12 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 new TrustifySpec.OidcSpec(
                         true,
                         true,
-                        null,
                         new TrustifySpec.ExternalOidcSpec(
                                 "http://keycloak." + getNamespaceName() + ".svc:8080/realms/trustify",
                                 "frontend",
                                 null
-                        )
+                        ),
+                        null
                 ),
                 null,
                 null,
