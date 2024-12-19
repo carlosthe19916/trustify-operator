@@ -40,7 +40,7 @@ jobs:
       - name: Test
         env:
           KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
-        run: mvn verify -Dgroups=heavy
+        run: mvn verify
 
   kind:
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
         run: |
           export HOST_KUBERNETES_CONFIG_FILE=/home/$USER/.kube/config
           echo "Using ${HOST_KUBERNETES_CONFIG_FILE} as host k8s"
-          mvn verify -Dgroups=heavy
+          mvn verify
 
   minikube:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
         run: |
           export HOST_KUBERNETES_CONFIG_FILE=/home/$USER/.kube/config
           echo "Using ${HOST_KUBERNETES_CONFIG_FILE} as host k8s"
-          mvn verify -Dgroups=heavy
+          mvn verify
 
   crc:
     runs-on: ubuntu-latest
@@ -149,7 +149,7 @@ jobs:
         run: |
           export HOST_KUBERNETES_CONFIG_FILE=/home/$USER/.kube/config
           echo "Using ${HOST_KUBERNETES_CONFIG_FILE} as host k8s"
-          mvn verify
+          mvn verify -DexcludedGroups=heavy
 
   build-operator-bundle:
     runs-on: ubuntu-latest
