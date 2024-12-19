@@ -1,0 +1,39 @@
+.kc-social-grid .kc-social-icon-text {
+    left: 0px;
+}
+
+.kc-social-icon-text {
+    left: 0px;
+}
+
+.pf-v6-c-alert__title {
+    margin: 3px;
+}
+
+.pf-v6-theme-dark body {
+    color: #fff;
+}
+
+.pf-v6-theme-dark label {
+    color: #d8d8d8;
+}
+
+.ws-full-page-utils {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    padding: var(--pf-t--global--spacer--lg);
+    z-index: var(--pf-t--global--z-index--2xl);
+
+    left: 0 !important;
+    right: auto !important;
+}
+
+.ws-full-page-utils::before {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background-color: var(--pf-t--global--background--color--floating--default);
+    opacity: 0.8;
+    box-shadow: var(--pf-t--global--box-shadow--sm);
+}

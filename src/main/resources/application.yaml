@@ -16,6 +16,7 @@ related:
     ui: ${RELATED_IMAGE_UI:ghcr.io/trustification/trustify-ui:latest}
     server: ${RELATED_IMAGE_SERVER:ghcr.io/trustification/trustd:latest}
     db: ${RELATED_IMAGE_DB:quay.io/sclorg/postgresql-15-c9s:latest}
+#    keycloak: ${RELATED_IMAGE_DB:ghcr.io/cferiavi/trustify-keycloak-theme:latest}
     pull-policy: Always
 # Quarkus config
 quarkus:

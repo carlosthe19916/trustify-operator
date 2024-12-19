@@ -84,3 +84,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: "ghcr.io"
+
+    keycloak-build:
+      uses: trustification/release-tools/.github/workflows/build-push-images.yaml@main
+      with:
+        registry: "ghcr.io"
+        image_name: "${{ github.repository_owner }}/trustify-keycloak"
+        containerfile: "./kc.Dockerfile"
+        architectures: '[ "amd64", "arm64" ]'
+        extra-args: "--ulimit nofile=4096:4096"
+      secrets:
+        registry_username: ${{ github.actor }}
+        registry_password: ${{ secrets.GITHUB_TOKEN }}
