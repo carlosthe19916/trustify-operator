@@ -24,7 +24,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm run build-keycloak-theme
+      - run: |
+          npm clean-install --ignore-scripts
+          npm run build-keycloak-theme
         working-directory: keycloak
 
   rancher:
