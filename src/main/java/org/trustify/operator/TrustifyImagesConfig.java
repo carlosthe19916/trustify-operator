@@ -15,6 +15,9 @@ public interface TrustifyImagesConfig {
     @WithName("db")
     String dbImage();
 
+    @WithName("keycloak")
+    String keycloak();
+
     @WithName("pull-policy")
     String imagePullPolicy();
 }

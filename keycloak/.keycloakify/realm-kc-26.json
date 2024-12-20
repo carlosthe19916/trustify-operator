@@ -1626,7 +1626,7 @@
         "strictTransportSecurity": "max-age=31536000; includeSubDomains"
     },
     "smtpServer": {},
-    "loginTheme": "trustify",
+    "loginTheme": "trust",
     "accountTheme": "",
     "adminTheme": "",
     "emailTheme": "",

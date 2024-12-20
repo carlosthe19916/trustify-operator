@@ -46,6 +46,10 @@ public class KeycloakRealmService {
         return "trustify";
     }
 
+    public static String getLoginTheme(Trustify cr) {
+        return "trust";
+    }
+
     public static String getUIClientName(Trustify cr) {
         return "frontend";
     }
@@ -84,6 +88,7 @@ public class KeycloakRealmService {
         spec.setRealm(getDefaultRealm());
         Realm realmRepresentation = spec.getRealm();
         realmRepresentation.setRealm(getRealmName(cr));
+        realmRepresentation.setLoginTheme(getLoginTheme(cr));
 
         // Realm roles
         if (realmRepresentation.getRoles() == null) {

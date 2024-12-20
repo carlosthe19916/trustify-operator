@@ -16,7 +16,7 @@ related:
     ui: ${RELATED_IMAGE_UI:ghcr.io/trustification/trustify-ui:latest}
     server: ${RELATED_IMAGE_SERVER:ghcr.io/trustification/trustd:latest}
     db: ${RELATED_IMAGE_DB:quay.io/sclorg/postgresql-15-c9s:latest}
-#    keycloak: ${RELATED_IMAGE_DB:ghcr.io/cferiavi/trustify-keycloak:latest}
+    keycloak: ${RELATED_IMAGE_KEYCLOAK:ghcr.io/carlosthe19916/trustify-keycloak:latest}
     pull-policy: Always
 # Quarkus config
 quarkus:
@@ -46,6 +46,7 @@ quarkus:
         related-image-ui: ${related.image.ui}
         related-image-server: ${related.image.server}
         related-image-db: ${related.image.db}
+        related-image-keycloak: ${related.image.keycloak}
     resources:
       requests:
         memory: 64Mi

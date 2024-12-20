@@ -36,10 +36,10 @@ export default function Template(props: TemplateProps<KcContext, I18n>) {
 
     useEffect(() => {
         if (isDarkTheme) {
-            document.documentElement.classList.add("pf-v6-theme-dark");
+            document.documentElement.classList.add("pf-v5-theme-dark");
             localStorage.setItem("isDarkTheme", "true");
         } else {
-            document.documentElement.classList.remove("pf-v6-theme-dark");
+            document.documentElement.classList.remove("pf-v5-theme-dark");
             localStorage.setItem("isDarkTheme", "false");
         }
     }, [isDarkTheme]);
@@ -221,7 +221,7 @@ export default function Template(props: TemplateProps<KcContext, I18n>) {
                 )}
             </LoginPage>
 
-            <div className="pf-v6-l-flex pf-m-column pf-m-gap-lg ws-full-page-utils pf-v6-m-dir-ltr ">
+            <div className="pf-v5-l-flex pf-m-column pf-m-gap-lg ws-full-page-utils pf-v5-m-dir-ltr ">
                 <Switch
                     id="theme-switch"
                     label="Dark theme"

@@ -40,5 +40,5 @@ export default function KcPage(props: { kcContext: KcContext }) {
 const classes = {
     kcHtmlClass: "",
     kcBodyClass: "",
-    kcButtonClass: "pf-v6-c-button pf-m-primary pf-m-block"
+    kcButtonClass: "pf-v5-c-button pf-m-primary pf-m-block"
 } satisfies { [key in ClassKey]?: string };

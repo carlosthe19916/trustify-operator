@@ -12,6 +12,7 @@ import org.keycloak.k8s.v2alpha1.keycloakspec.*;
 import org.keycloak.k8s.v2alpha1.keycloakspec.db.PasswordSecret;
 import org.keycloak.k8s.v2alpha1.keycloakspec.db.UsernameSecret;
 import org.trustify.operator.TrustifyConfig;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.deployment.KeycloakDBDeployment;
@@ -30,6 +31,9 @@ public class KeycloakServerService {
 
     @Inject
     KubernetesClient k8sClient;
+
+    @Inject
+    TrustifyImagesConfig trustifyImagesConfig;
 
     @Inject
     TrustifyConfig trustifyConfig;
@@ -51,8 +55,8 @@ public class KeycloakServerService {
         KeycloakSpec spec = keycloak.getSpec();
         spec.setInstances(1L);
 
-//        spec.setImage("quay.io/cferiavi/keycloak:latest");
-//        spec.setStartOptimized(true);
+        spec.setImage(trustifyImagesConfig.keycloak());
+        spec.setStartOptimized(true);
 
         // Resources
         trustifyConfig.keycloakResources()
