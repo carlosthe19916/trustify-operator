@@ -3,7 +3,7 @@ apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
   annotations:
-    app.quarkus.io/quarkus-version: "3.15.1"
+    app.quarkus.io/quarkus-version: "3.15.2"
     app.quarkus.io/vcs-uri: "https://github.com/trustification/trustify-operator.git"
     prometheus.io/scrape: "true"
     prometheus.io/path: "/q/metrics"
@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       annotations:
-        app.quarkus.io/quarkus-version: "3.15.1"
+        app.quarkus.io/quarkus-version: "3.15.2"
         app.quarkus.io/vcs-uri: "https://github.com/trustification/trustify-operator.git"
         prometheus.io/scrape: "true"
         prometheus.io/path: "/q/metrics"
@@ -37,8 +37,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: "metadata.namespace"
-        - name: "RELATED_IMAGE_TRUSTIFY_SERVER"
+        - name: "RELATED_IMAGE_KEYCLOAK"
+          value: "ghcr.io/carlosthe19916/trustify-keycloak:latest"
+        - name: "RELATED_IMAGE_SERVER"
           value: "ghcr.io/trustification/trustd:latest"
+        - name: "RELATED_IMAGE_UI"
+          value: "ghcr.io/trustification/trustify-ui:latest"
         - name: "RELATED_IMAGE_DB"
           value: "quay.io/sclorg/postgresql-15-c9s:latest"
         - name: "QUARKUS_OPERATOR_SDK_CONTROLLERS_TRUSTIFY_NAMESPACES"

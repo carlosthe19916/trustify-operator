@@ -20,6 +20,9 @@ related:
     pull-policy: Always
 # Quarkus config
 quarkus:
+  native:
+    resources:
+      includes: realm.json
   qute:
     suffixes: yaml
   container-image:

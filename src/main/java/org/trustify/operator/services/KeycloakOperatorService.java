@@ -69,9 +69,13 @@ public class KeycloakOperatorService {
                 .addToTargetNamespaces(cr.getMetadata().getNamespace())
                 .endSpec()
                 .build();
-        k8sClient.resource(operatorGroup)
+        if (k8sClient.resource(operatorGroup)
                 .inNamespace(cr.getMetadata().getNamespace())
-                .create();
+                .get() == null) {
+            k8sClient.resource(operatorGroup)
+                    .inNamespace(cr.getMetadata().getNamespace())
+                    .create();
+        }
 
         Subscription subscription = subscription(cr);
         k8sClient.resource(subscription)
