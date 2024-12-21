@@ -60,18 +60,25 @@ public class KeycloakOperatorService {
         }
 
         // Operator group
-        OperatorGroup operatorGroup = new OperatorGroupBuilder()
-                .withNewMetadata()
-                .withName("operatorgroup")
-                .withNamespace(cr.getMetadata().getNamespace())
-                .endMetadata()
-                .withNewSpec()
-                .addToTargetNamespaces(cr.getMetadata().getNamespace())
-                .endSpec()
-                .build();
-        k8sClient.resource(operatorGroup)
+        if (k8sClient.resources(OperatorGroup.class)
                 .inNamespace(cr.getMetadata().getNamespace())
-                .create();
+                .list()
+                .getItems()
+                .isEmpty()
+        ) {
+            OperatorGroup operatorGroup = new OperatorGroupBuilder()
+                    .withNewMetadata()
+                    .withName("operatorgroup")
+                    .withNamespace(cr.getMetadata().getNamespace())
+                    .endMetadata()
+                    .withNewSpec()
+                    .addToTargetNamespaces(cr.getMetadata().getNamespace())
+                    .endSpec()
+                    .build();
+            k8sClient.resource(operatorGroup)
+                    .inNamespace(cr.getMetadata().getNamespace())
+                    .create();
+        }
 
         Subscription subscription = subscription(cr);
         k8sClient.resource(subscription)

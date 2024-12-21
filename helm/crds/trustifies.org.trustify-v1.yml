@@ -21,60 +21,76 @@ spec:
                 description: "In this section you can find all properties related\
                   \ to connect to a database."
                 properties:
+                  embedded:
+                    properties:
+                      pvcSize:
+                        description: "Size of the PVC to create. Valid only if externalDatabase=false"
+                        type: "string"
+                      resources:
+                        description: "In this section you can configure resource limits\
+                          \ settings. Valid only if externalDatabase=false"
+                        properties:
+                          cpuLimit:
+                            description: "Limit CPU."
+                            type: "string"
+                          cpuRequest:
+                            description: "Requested CPU."
+                            type: "string"
+                          memoryLimit:
+                            description: "Limit Memory."
+                            type: "string"
+                          memoryRequest:
+                            description: "Requested memory."
+                            type: "string"
+                        type: "object"
+                    type: "object"
+                  external:
+                    properties:
+                      host:
+                        description: "The host of the database."
+                        type: "string"
+                      name:
+                        description: "The database name."
+                        type: "string"
+                      passwordSecret:
+                        description: "The reference to a secret holding the password\
+                          \ of the database user."
+                        properties:
+                          key:
+                            type: "string"
+                          name:
+                            type: "string"
+                          optional:
+                            type: "boolean"
+                        type: "object"
+                      poolMaxSize:
+                        description: "The maximum size of the connection pool."
+                        type: "integer"
+                      poolMinSize:
+                        description: "The minimal size of the connection pool."
+                        type: "integer"
+                      port:
+                        description: "The port of the database."
+                        type: "string"
+                      sslMode:
+                        description: "default: prefer [possible values: disable, allow,\
+                          \ prefer, require, verify-ca, verify-full]"
+                        type: "string"
+                      usernameSecret:
+                        description: "The reference to a secret holding the username\
+                          \ of the database user."
+                        properties:
+                          key:
+                            type: "string"
+                          name:
+                            type: "string"
+                          optional:
+                            type: "boolean"
+                        type: "object"
+                    type: "object"
                   externalDatabase:
                     description: "Use external database."
                     type: "boolean"
-                  host:
-                    description: "The host of the database."
-                    type: "string"
-                  name:
-                    description: "The database name."
-                    type: "string"
-                  passwordSecret:
-                    description: "The reference to a secret holding the password of\
-                      \ the database user."
-                    properties:
-                      key:
-                        type: "string"
-                      name:
-                        type: "string"
-                      optional:
-                        type: "boolean"
-                    type: "object"
-                  port:
-                    description: "The port of the database."
-                    type: "string"
-                  pvcSize:
-                    description: "Size of the PVC to create. Valid only if externalDatabase=false"
-                    type: "string"
-                  resourceLimits:
-                    description: "In this section you can configure resource limits\
-                      \ settings. Valid only if externalDatabase=false"
-                    properties:
-                      cpuLimit:
-                        description: "Limit CPU."
-                        type: "string"
-                      cpuRequest:
-                        description: "Requested CPU."
-                        type: "string"
-                      memoryLimit:
-                        description: "Limit Memory."
-                        type: "string"
-                      memoryRequest:
-                        description: "Requested memory."
-                        type: "string"
-                    type: "object"
-                  usernameSecret:
-                    description: "The reference to a secret holding the username of\
-                      \ the database user."
-                    properties:
-                      key:
-                        type: "string"
-                      name:
-                        type: "string"
-                      optional:
-                        type: "boolean"
-                    type: "object"
                 type: "object"
               dbImage:
                 description: "Custom Trustify DB Server image to be used. For internal\
@@ -112,24 +128,108 @@ spec:
               oidc:
                 description: "In this section you can configure Oidc settings."
                 properties:
+                  embedded:
+                    properties:
+                      db:
+                        description: "In this section you can find all properties\
+                          \ related to connect to a database."
+                        properties:
+                          embedded:
+                            properties:
+                              pvcSize:
+                                description: "Size of the PVC to create. Valid only\
+                                  \ if externalDatabase=false"
+                                type: "string"
+                              resources:
+                                description: "In this section you can configure resource\
+                                  \ limits settings. Valid only if externalDatabase=false"
+                                properties:
+                                  cpuLimit:
+                                    description: "Limit CPU."
+                                    type: "string"
+                                  cpuRequest:
+                                    description: "Requested CPU."
+                                    type: "string"
+                                  memoryLimit:
+                                    description: "Limit Memory."
+                                    type: "string"
+                                  memoryRequest:
+                                    description: "Requested memory."
+                                    type: "string"
+                                type: "object"
+                            type: "object"
+                          external:
+                            properties:
+                              host:
+                                description: "The host of the database."
+                                type: "string"
+                              name:
+                                description: "The database name."
+                                type: "string"
+                              passwordSecret:
+                                description: "The reference to a secret holding the\
+                                  \ password of the database user."
+                                properties:
+                                  key:
+                                    type: "string"
+                                  name:
+                                    type: "string"
+                                  optional:
+                                    type: "boolean"
+                                type: "object"
+                              port:
+                                description: "The port of the database."
+                                type: "string"
+                              usernameSecret:
+                                description: "The reference to a secret holding the\
+                                  \ username of the database user."
+                                properties:
+                                  key:
+                                    type: "string"
+                                  name:
+                                    type: "string"
+                                  optional:
+                                    type: "boolean"
+                                type: "object"
+                              vendor:
+                                description: "The database vendor. E.g. 'postgres'"
+                                type: "string"
+                            type: "object"
+                          externalDatabase:
+                            description: "Use external database."
+                            type: "boolean"
+                        type: "object"
+                      tlsSecret:
+                        description: "A secret containing the TLS configuration for\
+                          \ OIDC - HTTPS. Reference: https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets."
+                        type: "string"
+                    type: "object"
                   enabled:
-                    description: "Enable Oidc Auth."
+                    description: "Enable Auth."
                     type: "boolean"
-                  serverClientId:
-                    description: "Oidc client id for the Server."
-                    type: "string"
-                  serverUrl:
-                    description: "Oidc server url."
-                    type: "string"
-                  uiClientId:
-                    description: "Oidc client id for the UI."
-                    type: "string"
+                  external:
+                    properties:
+                      serverUrl:
+                        description: "Oidc server url."
+                        type: "string"
+                      tlsSecret:
+                        description: "A secret containing the TLS configuration for\
+                          \ OIDC - HTTPS. Reference: https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets."
+                        type: "string"
+                      uiClientId:
+                        description: "Oidc client id for the UI."
+                        type: "string"
+                    type: "object"
+                  externalServer:
+                    description: "Whether or not the user will provide its own OIDC\
+                      \ Server. If 'false', the operator will provide a OIDC Server"
+                    type: "boolean"
                 type: "object"
               serverImage:
                 description: "Custom Trustify Server image to be used. For internal\
                   \ use only"
                 type: "string"
-              serverResourceLimits:
+              serverResources:
                 description: "In this section you can configure resource limits settings\
                   \ for the Server."
                 properties:
@@ -181,6 +281,27 @@ spec:
                     enum:
                     - "FILESYSTEM"
                     - "S3"
+                    type: "string"
+                type: "object"
+              uiImage:
+                description: "Custom Trustify UI image to be used. For internal use\
+                  \ only"
+                type: "string"
+              uiResources:
+                description: "In this section you can configure resource limits settings\
+                  \ for the UI."
+                properties:
+                  cpuLimit:
+                    description: "Limit CPU."
+                    type: "string"
+                  cpuRequest:
+                    description: "Requested CPU."
+                    type: "string"
+                  memoryLimit:
+                    description: "Limit Memory."
+                    type: "string"
+                  memoryRequest:
+                    description: "Requested memory."
                     type: "string"
                 type: "object"
             type: "object"

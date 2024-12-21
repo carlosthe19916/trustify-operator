@@ -1,6 +1,8 @@
 package org.trustify.operator.utils;
 
 import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
@@ -10,6 +12,20 @@ import java.util.function.Function;
 
 public class CRDUtils {
 
+    public static Optional<String> extractHostFromIngress(Ingress ingress) {
+        return Optional.ofNullable(ingress.getSpec())
+                .flatMap(ingressSpec -> ingressSpec
+                        .getRules()
+                        .stream().findFirst()
+                        .map(IngressRule::getHost)
+                )
+                .or(() -> Optional.ofNullable(ingress.getStatus())
+                        .flatMap(status -> Optional.ofNullable(status.getLoadBalancer()))
+                        .flatMap(loadBalancerStatus -> Optional.ofNullable(loadBalancerStatus.getIngress()))
+                        .flatMap(loadBalancerIngresses -> loadBalancerIngresses.stream().findFirst())
+                        .map(loadBalancerIngress -> Objects.nonNull(loadBalancerIngress.getIp()) ? loadBalancerIngress.getIp() : loadBalancerIngress.getHostname())
+                );
+    }
     public static OwnerReference getOwnerReference(Trustify cr) {
         return new OwnerReferenceBuilder()
                 .withApiVersion(cr.getApiVersion())

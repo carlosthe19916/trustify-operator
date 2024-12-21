@@ -12,6 +12,16 @@ import io.quarkiverse.operatorsdk.annotations.SharedCSVMetadata;
                         verbs = {"*"}
                 ),
                 @CSVMetadata.PermissionRule(
+                        apiGroups = {"k8s.keycloak.org"},
+                        resources = {"keycloaks", "keycloakrealmimports"},
+                        verbs = {"*"}
+                ),
+                @CSVMetadata.PermissionRule(
+                        apiGroups = {"operators.coreos.com"},
+                        resources = {"subscriptions", "operatorgroups", "clusterserviceversions"},
+                        verbs = {"*"}
+                ),
+                @CSVMetadata.PermissionRule(
                         apiGroups = {"route.openshift.io"},
                         resources = {"routes"},
                         verbs = {"*"}

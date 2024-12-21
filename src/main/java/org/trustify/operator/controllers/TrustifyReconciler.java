@@ -226,11 +226,18 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
                 }
             }
 
+            AppIngressReadyPostCondition appIngressReadyPostCondition = new AppIngressReadyPostCondition();
+            boolean isIngressReady = appIngressReadyPostCondition.isMet(null, cr, context);
+            if (!isIngressReady) {
+                logger.info("Waiting for the Ingress to be ready");
+                return Optional.of(UpdateControl.<Trustify>noUpdate().rescheduleAfter(5, TimeUnit.SECONDS));
+            }
+
             // Keycloak Server
             Keycloak kcInstance = keycloakServerService.getCurrentInstance(cr)
                     .orElseGet(() -> {
                         logger.info("Creating a Keycloak Server");
-                        return keycloakServerService.initInstance(cr);
+                        return keycloakServerService.initInstance(cr, context);
                     });
             boolean isKcInstanceReady = KeycloakUtils.isKeycloakServerReady(kcInstance);
             if (!isKcInstanceReady) {
