@@ -13,6 +13,7 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @ApplicationScoped
 public class KeycloakOperatorService {
@@ -44,10 +45,11 @@ public class KeycloakOperatorService {
                 .build();
     }
 
-    public boolean subscriptionExists(Trustify cr) {
-        return k8sClient.resource(subscription(cr))
+    public Optional<Subscription> getCurrentInstance(Trustify cr) {
+        Subscription subscription = k8sClient.resource(subscription(cr))
                 .inNamespace(cr.getMetadata().getNamespace())
-                .get() != null;
+                .get();
+        return Optional.ofNullable(subscription);
     }
 
     public void createSubscription(Trustify cr) {
@@ -122,4 +124,9 @@ public class KeycloakOperatorService {
         return new AbstractMap.SimpleEntry<>(true, "Subscription is ready.");
     }
 
+    public void cleanupDependentResources(Trustify cr) {
+        getCurrentInstance(cr).ifPresent(subscription -> {
+            k8sClient.resource(subscription).delete();
+        });
+    }
 }

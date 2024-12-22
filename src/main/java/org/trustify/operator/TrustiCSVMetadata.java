@@ -97,15 +97,15 @@ import io.quarkiverse.operatorsdk.annotations.SharedCSVMetadata;
                 categories = "Application Runtime",
                 capabilities = "Basic Install",
                 almExamples = """                                      
-                [{
-                  "apiVersion": "org.trustify/v1alpha1",
-                  "kind": "Trustify",
-                  "metadata": {
-                    "name": "myapp"
-                  },
-                  "spec": { }
-                }]
-                """
+                        [{
+                          "apiVersion": "org.trustify/v1alpha1",
+                          "kind": "Trustify",
+                          "metadata": {
+                            "name": "myapp"
+                          },
+                          "spec": { }
+                        }]
+                        """
         ),
         minKubeVersion = "1.23.0"
 )

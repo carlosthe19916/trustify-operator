@@ -202,7 +202,7 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
         boolean isKcRequired = KeycloakUtils.isKeycloakRequired(cr);
         if (isKcRequired) {
             // Keycloak Operator
-            boolean kcSubscriptionExists = keycloakOperatorService.subscriptionExists(cr);
+            boolean kcSubscriptionExists = keycloakOperatorService.getCurrentInstance(cr).isPresent();
             if (!kcSubscriptionExists) {
                 logger.info("Installing Keycloak Operator");
                 keycloakOperatorService.createSubscription(cr);
@@ -299,6 +299,7 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
     public DeleteControl cleanup(Trustify cr, Context<Trustify> context) {
         keycloakRealmService.cleanupDependentResources(cr);
         keycloakServerService.cleanupDependentResources(cr);
+        keycloakOperatorService.cleanupDependentResources(cr);
 
         return DeleteControl.defaultDelete();
     }

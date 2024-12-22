@@ -11,7 +11,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.deployment.KeycloakDBDeployment;
-import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 
 @KubernetesDependent(labelSelector = KeycloakDBService.LABEL_SELECTOR, resourceDiscriminator = KeycloakDBServiceDiscriminator.class)
 @ApplicationScoped

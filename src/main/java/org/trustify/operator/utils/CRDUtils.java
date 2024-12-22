@@ -26,6 +26,7 @@ public class CRDUtils {
                         .map(loadBalancerIngress -> Objects.nonNull(loadBalancerIngress.getIp()) ? loadBalancerIngress.getIp() : loadBalancerIngress.getHostname())
                 );
     }
+
     public static OwnerReference getOwnerReference(Trustify cr) {
         return new OwnerReferenceBuilder()
                 .withApiVersion(cr.getApiVersion())
