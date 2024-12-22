@@ -124,9 +124,4 @@ public class KeycloakOperatorService {
         return new AbstractMap.SimpleEntry<>(true, "Subscription is ready.");
     }
 
-    public void cleanupDependentResources(Trustify cr) {
-        getCurrentInstance(cr).ifPresent(subscription -> {
-            k8sClient.resource(subscription).delete();
-        });
-    }
 }

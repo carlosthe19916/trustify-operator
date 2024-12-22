@@ -299,7 +299,6 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
     public DeleteControl cleanup(Trustify cr, Context<Trustify> context) {
         keycloakRealmService.cleanupDependentResources(cr);
         keycloakServerService.cleanupDependentResources(cr);
-        keycloakOperatorService.cleanupDependentResources(cr);
 
         return DeleteControl.defaultDelete();
     }
