@@ -13,8 +13,8 @@ trustify:
 # Operator config
 related:
   image:
-    ui: ghcr.io/carlosthe19916/trustify-ui:latest
-    server: ghcr.io/carlosthe19916/trustd:latest
+    ui: ${RELATED_IMAGE_UI:ghcr.io/trustification/trustify-ui:latest}
+    server: ${RELATED_IMAGE_SERVER:ghcr.io/trustification/trustd:latest}
     db: ${RELATED_IMAGE_DB:quay.io/sclorg/postgresql-15-c9s:latest}
     keycloak: ${RELATED_IMAGE_KEYCLOAK:ghcr.io/carlosthe19916/trustify-keycloak:latest}
     pull-policy: Always

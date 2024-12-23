@@ -7,6 +7,7 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public interface DeploymentConfigurator {
 
@@ -26,7 +27,10 @@ public interface DeploymentConfigurator {
                 return false;
             }
 
-            boolean volumesMatch = Objects.equals(new HashSet<>(allVolumes()), new HashSet<>(podSpec.getVolumes()));
+            boolean volumesMatch = Objects.equals(
+                    allVolumes().stream().map(Volume::getName).collect(Collectors.toSet()),
+                    podSpec.getVolumes().stream().map(Volume::getName).collect(Collectors.toSet())
+            );
             if (!volumesMatch) {
                 return false;
             }
