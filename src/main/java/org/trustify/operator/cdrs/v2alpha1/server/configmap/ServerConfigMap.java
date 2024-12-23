@@ -19,10 +19,7 @@ import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.services.KeycloakRealmService;
 import org.trustify.operator.services.KeycloakServerService;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 @KubernetesDependent(labelSelector = ServerConfigMap.LABEL_SELECTOR, resourceDiscriminator = ServerConfigMapDiscriminator.class)
@@ -46,7 +43,17 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
         return newConfigMap(cr, context);
     }
 
-    private ConfigMap newConfigMap(Trustify cr, Context<Trustify> context) {
+    @Override
+    public Result<ConfigMap> match(ConfigMap actual, Trustify cr, Context<Trustify> context) {
+        boolean match = Objects.equals(getAuthValue(cr, context), actual.getData().get(getAuthKey(cr)));
+        return Result.nonComputed(match);
+    }
+
+    public static String getAuthKey(Trustify cr) {
+        return "auth.yaml";
+    }
+
+    public String getAuthValue(Trustify cr, Context<Trustify> context) {
         Optional<String> yamlFile = Optional.ofNullable(cr.getSpec().oidcSpec())
                 .flatMap(oidcSpec -> {
                     if (oidcSpec.enabled()) {
@@ -94,35 +101,23 @@ public class ServerConfigMap extends CRUDKubernetesDependentResource<ConfigMap, 
                     }
                     return Optional.empty();
                 });
+        return "\n" + yamlFile.orElse("");
+    }
 
-
+    private ConfigMap newConfigMap(Trustify cr, Context<Trustify> context) {
         return new ConfigMapBuilder()
                 .withMetadata(Constants.metadataBuilder
                         .apply(new Constants.Resource(getConfigMapName(cr), LABEL_SELECTOR, cr))
                         .build()
                 )
                 .withData(Map.of(
-                        getAuthKey(cr), "\n" + yamlFile.orElse(""))
+                        getAuthKey(cr), getAuthValue(cr, context))
                 )
                 .build();
     }
 
-    @Override
-    public Result<ConfigMap> match(ConfigMap actual, Trustify cr, Context<Trustify> context) {
-        final var desiredConfigMap = getConfigMapName(cr);
-        return Result.nonComputed(actual
-                .getMetadata()
-                .getName()
-                .equals(desiredConfigMap)
-        );
-    }
-
     public static String getConfigMapName(Trustify cr) {
         return cr.getMetadata().getName() + Constants.SERVER_CONFIG_MAP_SUFFIX;
-    }
-
-    public static String getAuthKey(Trustify cr) {
-        return "auth.yaml";
     }
 
     public static String getAuthTlsCaCertificateDirectory(Trustify cr) {

@@ -8,19 +8,11 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
-import org.trustify.operator.TrustifyConfig;
-import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
-import org.trustify.operator.cdrs.v2alpha1.keycloak.db.pvc.KeycloakDBPersistentVolumeClaim;
-import org.trustify.operator.cdrs.v2alpha1.keycloak.db.secret.KeycloakDBSecret;
+import org.trustify.operator.controllers.DeploymentConfigurator;
 import org.trustify.operator.services.KeycloakServerService;
-import org.trustify.operator.utils.CRDUtils;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @KubernetesDependent(labelSelector = KeycloakDBDeployment.LABEL_SELECTOR, resourceDiscriminator = KeycloakDBDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -29,10 +21,7 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=keycloak";
 
     @Inject
-    TrustifyImagesConfig trustifyImagesConfig;
-
-    @Inject
-    TrustifyConfig trustifyConfig;
+    KeycloakDBDeploymentConfigurator keycloakDBDeploymentConfigurator;
 
     public KeycloakDBDeployment() {
         super(Deployment.class);
@@ -45,15 +34,9 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
-        final var container = actual.getSpec()
-                .getTemplate().getSpec().getContainers()
-                .stream()
-                .findFirst();
-
-        return Result.nonComputed(container
-                .map(c -> c.getImage() != null)
-                .orElse(false)
-        );
+        DeploymentConfigurator.Config config = keycloakDBDeploymentConfigurator.configureDeployment(cr, context);
+        boolean match = config.match(actual.getSpec().getTemplate().getSpec());
+        return Result.nonComputed(match);
     }
 
     private Deployment newDeployment(Trustify cr, Context<Trustify> context) {
@@ -72,17 +55,7 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
     }
 
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(trustifyImagesConfig.dbImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
-
-
-        TrustifySpec.EmbeddedDatabaseSpec databaseSpec = Optional.ofNullable(cr.getSpec().oidcSpec())
-                .flatMap(oidcSpec -> Optional.ofNullable(oidcSpec.embeddedOidcSpec()))
-                .flatMap(embeddedOidcSpec -> Optional.ofNullable(embeddedOidcSpec.databaseSpec()))
-                .flatMap(dbSpec -> Optional.ofNullable(dbSpec.embeddedDatabaseSpec()))
-                .orElse(null);
-        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(databaseSpec, TrustifySpec.EmbeddedDatabaseSpec::resourceLimits)
-                .orElse(null);
+        DeploymentConfigurator.Config config = keycloakDBDeploymentConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()
@@ -101,12 +74,12 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
                         .withSpec(new PodSpecBuilder()
                                 .withRestartPolicy("Always")
                                 .withTerminationGracePeriodSeconds(60L)
-                                .withImagePullSecrets(cr.getSpec().imagePullSecrets())
+                                .withImagePullSecrets(config.imagePullSecrets())
                                 .withContainers(new ContainerBuilder()
                                         .withName("database")
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(getEnvVars(cr))
+                                        .withImage(config.image())
+                                        .withImagePullPolicy(config.imagePullPolicy())
+                                        .withEnv(config.allEnvVars())
                                         .withPorts(new ContainerPortBuilder()
                                                 .withName("tcp")
                                                 .withProtocol(Constants.SERVICE_PROTOCOL)
@@ -137,50 +110,16 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
                                                 .withFailureThreshold(3)
                                                 .build()
                                         )
-                                        .withVolumeMounts(new VolumeMountBuilder()
-                                                .withName("db-pvol")
-                                                .withMountPath("/var/lib/pgsql/data")
-                                                .build()
-                                        )
-                                        .withResources(CRDUtils.getResourceRequirements(resourcesLimitSpec, trustifyConfig))
+                                        .withVolumeMounts(config.allVolumeMounts())
+                                        .withResources(config.resourceRequirements())
                                         .build()
                                 )
-                                .withVolumes(new VolumeBuilder()
-                                        .withName("db-pvol")
-                                        .withPersistentVolumeClaim(new PersistentVolumeClaimVolumeSourceBuilder()
-                                                .withClaimName(KeycloakDBPersistentVolumeClaim.getPersistentVolumeClaimName(cr))
-                                                .build()
-                                        )
-                                        .build()
-                                )
+                                .withVolumes(config.allVolumes())
                                 .build()
                         )
                         .build()
                 )
                 .build();
-    }
-
-    private List<EnvVar> getEnvVars(Trustify cr) {
-        return Arrays.asList(
-                new EnvVarBuilder()
-                        .withName("POSTGRESQL_USER")
-                        .withValueFrom(new EnvVarSourceBuilder()
-                                .withSecretKeyRef(KeycloakDBSecret.getUsernameKeySelector(cr))
-                                .build()
-                        )
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("POSTGRESQL_PASSWORD")
-                        .withValueFrom(new EnvVarSourceBuilder()
-                                .withSecretKeyRef(KeycloakDBSecret.getPasswordKeySelector(cr))
-                                .build()
-                        )
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("POSTGRESQL_DATABASE")
-                        .withValue(getDatabaseName(cr))
-                        .build()
-        );
     }
 
     public static String getDeploymentName(Trustify cr) {

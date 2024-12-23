@@ -8,18 +8,10 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
-import org.trustify.operator.TrustifyConfig;
-import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
-import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
-import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
-import org.trustify.operator.utils.CRDUtils;
+import org.trustify.operator.controllers.DeploymentConfigurator;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @KubernetesDependent(labelSelector = DBDeployment.LABEL_SELECTOR, resourceDiscriminator = DBDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -28,10 +20,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=db";
 
     @Inject
-    TrustifyImagesConfig trustifyImagesConfig;
-
-    @Inject
-    TrustifyConfig trustifyConfig;
+    DBDeploymentConfigurator dbDeploymentConfigurator;
 
     public DBDeployment() {
         super(Deployment.class);
@@ -44,15 +33,9 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
-        final var container = actual.getSpec()
-                .getTemplate().getSpec().getContainers()
-                .stream()
-                .findFirst();
-
-        return Result.nonComputed(container
-                .map(c -> c.getImage() != null)
-                .orElse(false)
-        );
+        DeploymentConfigurator.Config config = dbDeploymentConfigurator.configureDeployment(cr, context);
+        boolean match = config.match(actual.getSpec().getTemplate().getSpec());
+        return Result.nonComputed(match);
     }
 
     private Deployment newDeployment(Trustify cr, Context<Trustify> context) {
@@ -67,13 +50,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     }
 
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        String image = Optional.ofNullable(cr.getSpec().dbImage()).orElse(trustifyImagesConfig.dbImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
-
-        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = Optional.ofNullable(cr.getSpec().databaseSpec())
-                .flatMap(databaseSpec -> Optional.ofNullable(databaseSpec.embeddedDatabaseSpec()))
-                .map(TrustifySpec.EmbeddedDatabaseSpec::resourceLimits)
-                .orElse(null);
+        DeploymentConfigurator.Config config = dbDeploymentConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()
@@ -95,9 +72,9 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                                 .withImagePullSecrets(cr.getSpec().imagePullSecrets())
                                 .withContainers(new ContainerBuilder()
                                         .withName(Constants.TRUSTI_DB_NAME)
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(getEnvVars(cr))
+                                        .withImage(config.image())
+                                        .withImagePullPolicy(config.imagePullPolicy())
+                                        .withEnv(config.allEnvVars())
                                         .withPorts(new ContainerPortBuilder()
                                                 .withName("tcp")
                                                 .withProtocol(Constants.SERVICE_PROTOCOL)
@@ -128,50 +105,16 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                                                 .withFailureThreshold(3)
                                                 .build()
                                         )
-                                        .withVolumeMounts(new VolumeMountBuilder()
-                                                .withName("db-pvol")
-                                                .withMountPath("/var/lib/pgsql/data")
-                                                .build()
-                                        )
-                                        .withResources(CRDUtils.getResourceRequirements(resourcesLimitSpec, trustifyConfig))
+                                        .withVolumeMounts(config.allVolumeMounts())
+                                        .withResources(config.resourceRequirements())
                                         .build()
                                 )
-                                .withVolumes(new VolumeBuilder()
-                                        .withName("db-pvol")
-                                        .withPersistentVolumeClaim(new PersistentVolumeClaimVolumeSourceBuilder()
-                                                .withClaimName(DBPersistentVolumeClaim.getPersistentVolumeClaimName(cr))
-                                                .build()
-                                        )
-                                        .build()
-                                )
+                                .withVolumes(config.allVolumes())
                                 .build()
                         )
                         .build()
                 )
                 .build();
-    }
-
-    private List<EnvVar> getEnvVars(Trustify cr) {
-        return Arrays.asList(
-                new EnvVarBuilder()
-                        .withName("POSTGRESQL_USER")
-                        .withValueFrom(new EnvVarSourceBuilder()
-                                .withSecretKeyRef(DBSecret.getUsernameSecretKeySelector(cr))
-                                .build()
-                        )
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("POSTGRESQL_PASSWORD")
-                        .withValueFrom(new EnvVarSourceBuilder()
-                                .withSecretKeyRef(DBSecret.getPasswordSecretKeySelector(cr))
-                                .build()
-                        )
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("POSTGRESQL_DATABASE")
-                        .withValue(getDatabaseName(cr))
-                        .build()
-        );
     }
 
     public static String getDeploymentName(Trustify cr) {

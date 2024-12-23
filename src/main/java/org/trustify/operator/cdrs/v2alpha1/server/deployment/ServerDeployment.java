@@ -11,17 +11,11 @@ import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
-import org.trustify.operator.TrustifyConfig;
-import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
-import org.trustify.operator.controllers.TrustifyDistConfigurator;
-import org.trustify.operator.utils.CRDUtils;
+import org.trustify.operator.controllers.DeploymentConfigurator;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @KubernetesDependent(labelSelector = ServerDeployment.LABEL_SELECTOR, resourceDiscriminator = ServerDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -31,13 +25,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=server";
 
     @Inject
-    TrustifyImagesConfig trustifyImagesConfig;
-
-    @Inject
-    TrustifyConfig trustifyConfig;
-
-    @Inject
-    TrustifyDistConfigurator distConfigurator;
+    ServerDeploymentConfigurator distConfigurator;
 
     public ServerDeployment() {
         super(Deployment.class);
@@ -50,15 +38,9 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
-        final var container = actual.getSpec()
-                .getTemplate().getSpec().getContainers()
-                .stream()
-                .findFirst();
-
-        return Result.nonComputed(container
-                .map(c -> c.getImage() != null)
-                .orElse(false)
-        );
+        DeploymentConfigurator.Config config = distConfigurator.configureDeployment(cr, context);
+        boolean match = config.match(actual.getSpec().getTemplate().getSpec());
+        return Result.nonComputed(match);
     }
 
     @Override
@@ -75,7 +57,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 .orElse(false);
     }
 
-    private Deployment newDeployment(Trustify cr, Context<Trustify> context, TrustifyDistConfigurator distConfigurator) {
+    private Deployment newDeployment(Trustify cr, Context<Trustify> context, ServerDeploymentConfigurator distConfigurator) {
         return new DeploymentBuilder()
                 .withMetadata(Constants.metadataBuilder
                         .apply(new Constants.Resource(getDeploymentName(cr), LABEL_SELECTOR, cr))
@@ -89,17 +71,8 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 .build();
     }
 
-    private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context, TrustifyDistConfigurator distConfigurator) {
-        String image = Optional.ofNullable(cr.getSpec().serverImage()).orElse(trustifyImagesConfig.serverImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
-
-        TrustifyDistConfigurator.Config distConfig = distConfigurator.configureDistOption(cr);
-        List<EnvVar> envVars = distConfig.allEnvVars();
-        List<Volume> volumes = distConfig.allVolumes();
-        List<VolumeMount> volumeMounts = distConfig.allVolumeMounts();
-
-        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(cr.getSpec(), TrustifySpec::serverResourceLimitSpec)
-                .orElse(null);
+    private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context, ServerDeploymentConfigurator distConfigurator) {
+        ServerDeploymentConfigurator.Config config = distConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()
@@ -121,9 +94,9 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                 .withImagePullSecrets(cr.getSpec().imagePullSecrets())
                                 .withInitContainers(new ContainerBuilder()
                                         .withName("migrate")
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(envVars)
+                                        .withImage(config.image())
+                                        .withImagePullPolicy(config.imagePullPolicy())
+                                        .withEnv(config.allEnvVars())
                                         .withCommand("/usr/local/bin/trustd")
                                         .withArgs(
                                                 "db",
@@ -133,9 +106,9 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                 )
                                 .withContainers(new ContainerBuilder()
                                         .withName(Constants.TRUSTI_SERVER_NAME)
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(envVars)
+                                        .withImage(config.image())
+                                        .withImagePullPolicy(config.imagePullPolicy())
+                                        .withEnv(config.allEnvVars())
                                         .withCommand("/usr/local/bin/trustd")
                                         .withArgs(
                                                 "api",
@@ -195,11 +168,11 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                                 .withFailureThreshold(3)
                                                 .build()
                                         )
-                                        .withVolumeMounts(volumeMounts)
-                                        .withResources(CRDUtils.getResourceRequirements(resourcesLimitSpec, trustifyConfig))
+                                        .withVolumeMounts(config.allVolumeMounts())
+                                        .withResources(config.resourceRequirements())
                                         .build()
                                 )
-                                .withVolumes(volumes)
+                                .withVolumes(config.allVolumes())
                                 .build()
                         )
                         .build()

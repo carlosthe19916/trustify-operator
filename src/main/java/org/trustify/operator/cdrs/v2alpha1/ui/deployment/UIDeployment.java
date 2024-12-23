@@ -10,20 +10,12 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.keycloak.k8s.v2alpha1.Keycloak;
 import org.trustify.operator.Constants;
-import org.trustify.operator.TrustifyConfig;
-import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
-import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
-import org.trustify.operator.services.KeycloakRealmService;
-import org.trustify.operator.services.KeycloakServerService;
-import org.trustify.operator.utils.CRDUtils;
+import org.trustify.operator.controllers.DeploymentConfigurator;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Map;
 
 @KubernetesDependent(labelSelector = UIDeployment.LABEL_SELECTOR, resourceDiscriminator = UIDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -33,13 +25,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=ui";
 
     @Inject
-    TrustifyImagesConfig trustifyImagesConfig;
-
-    @Inject
-    TrustifyConfig trustifyConfig;
-
-    @Inject
-    ServerService serverService;
+    UIDeploymentConfigurator uiDeploymentConfigurator;
 
     public UIDeployment() {
         super(Deployment.class);
@@ -52,15 +38,9 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
-        final var container = actual.getSpec()
-                .getTemplate().getSpec().getContainers()
-                .stream()
-                .findFirst();
-
-        return Result.nonComputed(container
-                .map(c -> c.getImage() != null)
-                .orElse(false)
-        );
+        DeploymentConfigurator.Config config = uiDeploymentConfigurator.configureDeployment(cr, context);
+        boolean match = config.match(actual.getSpec().getTemplate().getSpec());
+        return Result.nonComputed(match);
     }
 
     @Override
@@ -95,11 +75,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     }
 
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        String image = Optional.ofNullable(cr.getSpec().uiImage()).orElse(trustifyImagesConfig.uiImage());
-        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
-
-        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(cr.getSpec(), TrustifySpec::uiResourceLimitSpec)
-                .orElse(null);
+        DeploymentConfigurator.Config config = uiDeploymentConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()
@@ -118,12 +94,12 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                         .withSpec(new PodSpecBuilder()
                                 .withRestartPolicy("Always")
                                 .withTerminationGracePeriodSeconds(60L)
-                                .withImagePullSecrets(cr.getSpec().imagePullSecrets())
+                                .withImagePullSecrets(config.imagePullSecrets())
                                 .withContainers(new ContainerBuilder()
                                         .withName(Constants.TRUSTI_UI_NAME)
-                                        .withImage(image)
-                                        .withImagePullPolicy(imagePullPolicy)
-                                        .withEnv(getEnvVars(cr, context))
+                                        .withImage(config.image())
+                                        .withImagePullPolicy(config.imagePullPolicy())
+                                        .withEnv(config.allEnvVars())
                                         .withPorts(
                                                 new ContainerPortBuilder()
                                                         .withName("http")
@@ -161,98 +137,16 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
                                                 .withFailureThreshold(3)
                                                 .build()
                                         )
-                                        .withResources(CRDUtils.getResourceRequirements(resourcesLimitSpec, trustifyConfig))
+                                        .withVolumeMounts(config.allVolumeMounts())
+                                        .withResources(config.resourceRequirements())
                                         .build()
                                 )
+                                .withVolumes(config.allVolumes())
                                 .build()
                         )
                         .build()
                 )
                 .build();
-    }
-
-    private List<EnvVar> getEnvVars(Trustify cr, Context<Trustify> context) {
-        List<EnvVar> oidcEnvVars = Optional.ofNullable(cr.getSpec().oidcSpec())
-                .flatMap(oidcSpec -> {
-                    if (!oidcSpec.enabled()) {
-                        return Optional.empty();
-                    }
-
-                    List<EnvVar> envVars;
-                    if (oidcSpec.externalServer()) {
-                        envVars = Optional.ofNullable(oidcSpec.externalOidcSpec())
-                                .map(externalOidcSpec -> List.of(
-                                        new EnvVarBuilder()
-                                                .withName("OIDC_SERVER_URL")
-                                                .withValue(externalOidcSpec.serverUrl())
-                                                .build(),
-                                        new EnvVarBuilder()
-                                                .withName("OIDC_CLIENT_ID")
-                                                .withValue(externalOidcSpec.uiClientId())
-                                                .build()
-                                ))
-                                .orElseGet(ArrayList::new);
-                    } else {
-                        final AtomicReference<Keycloak> keycloakInstance = context.managedDependentResourceContext().getMandatory(Constants.KEYCLOAK, AtomicReference.class);
-                        envVars = List.of(
-                                new EnvVarBuilder()
-                                        .withName("OIDC_SERVER_URL")
-                                        .withValue(KeycloakServerService.getServiceUrl(cr, keycloakInstance.get()))
-                                        .build(),
-                                new EnvVarBuilder()
-                                        .withName("OIDC_CLIENT_ID")
-                                        .withValue(KeycloakRealmService.getUIClientName(cr))
-                                        .build(),
-                                new EnvVarBuilder()
-                                        .withName("OIDC_SERVER_IS_EMBEDDED")
-                                        .withValue(Boolean.TRUE.toString())
-                                        .build(),
-                                new EnvVarBuilder()
-                                        .withName("OIDC_SERVER_EMBEDDED_PATH")
-                                        .withValue(KeycloakRealmService.getRealmClientRelativePath(cr))
-                                        .build()
-                        );
-                    }
-
-                    List<EnvVar> result = new ArrayList<>();
-                    result.add(new EnvVarBuilder()
-                            .withName("AUTH_REQUIRED")
-                            .withValue(Boolean.TRUE.toString())
-                            .build()
-                    );
-                    result.addAll(envVars);
-                    return Optional.of(result);
-                })
-                .orElseGet(() -> List.of(new EnvVarBuilder()
-                        .withName("AUTH_REQUIRED")
-                        .withValue(Boolean.FALSE.toString())
-                        .build()
-                ));
-
-        List<EnvVar> envVars = Arrays.asList(
-                new EnvVarBuilder()
-                        .withName("ANALYTICS_ENABLED")
-                        .withValue("false")
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("TRUSTIFY_API_URL")
-                        .withValue(serverService.getServiceUrl(cr))
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("UI_INGRESS_PROXY_BODY_SIZE")
-                        .withValue("50m")
-                        .build(),
-                new EnvVarBuilder()
-                        .withName("NODE_EXTRA_CA_CERTS")
-                        .withValue("/opt/app-root/src/ca.crt")
-                        .build()
-        );
-
-        List<EnvVar> result = new ArrayList<>();
-        result.addAll(oidcEnvVars);
-        result.addAll(envVars);
-
-        return result;
     }
 
     public static String getDeploymentName(Trustify cr) {

@@ -1,43 +1,56 @@
-package org.trustify.operator.controllers;
+package org.trustify.operator.cdrs.v2alpha1.server.deployment;
 
 import io.fabric8.kubernetes.api.model.*;
+import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.trustify.operator.TrustifyConfig;
+import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.configmap.ServerConfigMap;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
-import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.utils.ServerUtils;
-import org.trustify.operator.services.ClusterService;
+import org.trustify.operator.controllers.DeploymentConfigurator;
 import org.trustify.operator.services.KeycloakRealmService;
+import org.trustify.operator.utils.CRDUtils;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
-public class TrustifyDistConfigurator {
+public class ServerDeploymentConfigurator implements DeploymentConfigurator {
+
+    @Inject
+    TrustifyConfig trustifyConfig;
+
+    @Inject
+    TrustifyImagesConfig trustifyImagesConfig;
 
     @Inject
     ServerUtils serverUtils;
 
-    @Inject
-    ClusterService clusterService;
+    @Override
+    public Config configureDeployment(Trustify cr, Context<Trustify> context) {
+        String image = Optional.ofNullable(cr.getSpec().serverImage()).orElse(trustifyImagesConfig.serverImage());
+        String imagePullPolicy = Optional.ofNullable(cr.getSpec().imagePullPolicy()).orElse(trustifyImagesConfig.imagePullPolicy());
 
-    public record Config(
-            List<EnvVar> allEnvVars,
-            List<Volume> allVolumes,
-            List<VolumeMount> allVolumeMounts
-    ) {
-    }
+        List<LocalObjectReference> imagePullSecrets = Optional.ofNullable(cr.getSpec().imagePullSecrets()).orElse(new ArrayList<>());
 
-    public Config configureDistOption(Trustify cr) {
+        TrustifySpec.ResourcesLimitSpec resourcesLimitSpec = CRDUtils.getValueFromSubSpec(cr.getSpec(), TrustifySpec::serverResourceLimitSpec)
+                .orElse(null);
+        ResourceRequirements resourceRequirements = CRDUtils.getResourceRequirements(resourcesLimitSpec, trustifyConfig);
+
         Config config = new Config(
+                image,
+                imagePullPolicy,
+                imagePullSecrets,
+                resourceRequirements,
                 new ArrayList<>(),
                 new ArrayList<>(),
                 new ArrayList<>()
@@ -53,22 +66,22 @@ public class TrustifyDistConfigurator {
     }
 
     private void configureGeneral(Config config, Trustify cr) {
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName("RUST_LOG")
                 .withValue("info")
                 .build()
         );
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName("INFRASTRUCTURE_ENABLED")
                 .withValue("true")
                 .build()
         );
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName("INFRASTRUCTURE_BIND")
                 .withValue("[::]:" + ServerDeployment.getDeploymentInfrastructurePort(cr))
                 .build()
         );
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName("CLIENT_TLS_CA_CERTIFICATES")
                 .withValue("/run/secrets/kubernetes.io/serviceaccount/service-ca.crt")
                 .build()
@@ -78,7 +91,7 @@ public class TrustifyDistConfigurator {
     private void configureHttp(Config config, Trustify cr) {
         configureTLS(config, cr);
 
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName("HTTP_SERVER_BIND_ADDR")
                 .withValue("::")
                 .build()
@@ -96,17 +109,17 @@ public class TrustifyDistConfigurator {
 
         String certificatesDir = "/opt/trustify/tls-server";
 
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName("HTTP_SERVER_TLS_ENABLED")
                 .withValue("true")
                 .build()
         );
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName(certFileOptionName)
                 .withValue(certificatesDir + "/tls.crt")
                 .build()
         );
-        config.allEnvVars.add(new EnvVarBuilder()
+        config.allEnvVars().add(new EnvVarBuilder()
                 .withName(keyFileOptionName)
                 .withValue(certificatesDir + "/tls.key")
                 .build()
@@ -126,8 +139,8 @@ public class TrustifyDistConfigurator {
                 .withReadOnly(true)
                 .build();
 
-        config.allVolumes.add(volume);
-        config.allVolumeMounts.add(volumeMount);
+        config.allVolumes().add(volume);
+        config.allVolumeMounts().add(volumeMount);
     }
 
     private void configureDatabase(Config config, Trustify cr) {
@@ -158,7 +171,7 @@ public class TrustifyDistConfigurator {
                         .getEnvVars()
                 );
 
-        config.allEnvVars.addAll(envVars);
+        config.allEnvVars().addAll(envVars);
     }
 
     private void configureStorage(Config config, Trustify cr) {
@@ -202,8 +215,8 @@ public class TrustifyDistConfigurator {
                         .withMountPath("/opt/trustify")
                         .build();
 
-                config.allVolumes.add(volume);
-                config.allVolumeMounts.add(volumeMount);
+                config.allVolumes().add(volume);
+                config.allVolumeMounts().add(volumeMount);
             }
             case S3 -> {
                 envVars.addAll(optionMapper(storageSpec.s3StorageSpec())
@@ -216,7 +229,7 @@ public class TrustifyDistConfigurator {
             }
         }
 
-        config.allEnvVars.addAll(envVars);
+        config.allEnvVars().addAll(envVars);
     }
 
     private void configureOidc(Config config, Trustify cr) {
@@ -243,7 +256,7 @@ public class TrustifyDistConfigurator {
 
                         oidcSecretName = Optional.ofNullable(oidcSpec.embeddedOidcSpec()).map(TrustifySpec.EmbeddedOidcSpec::tlsSecret);
                     }
-                    config.allEnvVars.addAll(embeddedUIEnvVars);
+                    config.allEnvVars().addAll(embeddedUIEnvVars);
 
 
                     oidcSecretName.ifPresent(secretName -> {
@@ -261,8 +274,8 @@ public class TrustifyDistConfigurator {
                                 .withMountPath(ServerConfigMap.getAuthTlsCaCertificateDirectory(cr))
                                 .withReadOnly(true)
                                 .build();
-                        config.allVolumes.add(oidcTlsVolume);
-                        config.allVolumeMounts.add(oidcTlsVolumeVolumeMount);
+                        config.allVolumes().add(oidcTlsVolume);
+                        config.allVolumeMounts().add(oidcTlsVolumeVolumeMount);
                     });
 
                     var authYaml = "/etc/config/auth.yaml";
@@ -279,16 +292,16 @@ public class TrustifyDistConfigurator {
                             .withMountPath(authYaml)
                             .withSubPath(ServerConfigMap.getAuthKey(cr))
                             .build();
-                    config.allVolumes.add(authVolume);
-                    config.allVolumeMounts.add(authVolumeMount);
+                    config.allVolumes().add(authVolume);
+                    config.allVolumeMounts().add(authVolumeMount);
 
-                    config.allEnvVars.add(new EnvVarBuilder()
+                    config.allEnvVars().add(new EnvVarBuilder()
                             .withName("AUTH_CONFIGURATION")
                             .withValue(authYaml)
                             .build()
                     );
 
-                    config.allEnvVars.add(new EnvVarBuilder()
+                    config.allEnvVars().add(new EnvVarBuilder()
                             .withName("AUTH_DISABLED")
                             .withValue(Boolean.FALSE.toString())
                             .build()
@@ -297,7 +310,7 @@ public class TrustifyDistConfigurator {
                     return Optional.of(true);
                 })
                 .orElseGet(() -> {
-                    config.allEnvVars.add(new EnvVarBuilder()
+                    config.allEnvVars().add(new EnvVarBuilder()
                             .withName("AUTH_DISABLED")
                             .withValue(Boolean.TRUE.toString())
                             .build()
