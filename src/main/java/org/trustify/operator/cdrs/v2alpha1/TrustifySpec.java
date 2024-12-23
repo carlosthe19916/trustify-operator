@@ -24,6 +24,12 @@ public record TrustifySpec(
         @JsonPropertyDescription("Secret(s) that might be used when pulling an image from a private container image registry or repository.")
         List<LocalObjectReference> imagePullSecrets,
 
+        @JsonPropertyDescription("Number of UI instances. Default is 1.")
+        Integer uiInstances,
+
+        @JsonPropertyDescription("Number of Server instances. Default is 1.")
+        Integer serverInstances,
+
         @JsonProperty("http")
         @JsonPropertyDescription("In this section you can configure features related to HTTP and HTTPS")
         HttpSpec httpSpec,
@@ -55,6 +61,8 @@ public record TrustifySpec(
 
     public TrustifySpec() {
         this(
+                null,
+                null,
                 null,
                 null,
                 null,

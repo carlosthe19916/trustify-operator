@@ -35,6 +35,8 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.OidcSpec(
                         false,
                         false,
@@ -134,6 +136,8 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.OidcSpec(
                         true,
                         true,
@@ -205,6 +209,8 @@ public class OidcSpecTest extends ReconcilerBaseTest {
         // Create
         final Trustify trustify = generateTrustify("embedded-oidc");
         trustify.setSpec(new TrustifySpec(
+                null,
+                null,
                 null,
                 null,
                 null,

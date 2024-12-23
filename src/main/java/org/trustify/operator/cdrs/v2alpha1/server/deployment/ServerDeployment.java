@@ -16,6 +16,7 @@ import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.controllers.DeploymentConfigurator;
 
 import java.util.Map;
+import java.util.Optional;
 
 @KubernetesDependent(labelSelector = ServerDeployment.LABEL_SELECTOR, resourceDiscriminator = ServerDeploymentDiscriminator.class)
 @ApplicationScoped
@@ -38,6 +39,11 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
+        boolean matchDesiredInstances = getDesiredInstances(cr) == actual.getSpec().getReplicas();
+        if (!matchDesiredInstances) {
+            return Result.nonComputed(false);
+        }
+
         DeploymentConfigurator.Config config = distConfigurator.configureDeployment(cr, context);
         boolean match = config.match(actual.getSpec().getTemplate().getSpec());
         return Result.nonComputed(match);
@@ -55,6 +61,11 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                     return false;
                 })
                 .orElse(false);
+    }
+
+    private int getDesiredInstances(Trustify cr) {
+        return Optional.ofNullable(cr.getSpec().serverInstances())
+                .orElse(1);
     }
 
     private Deployment newDeployment(Trustify cr, Context<Trustify> context, ServerDeploymentConfigurator distConfigurator) {
@@ -79,7 +90,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                         .withType("Recreate")
                         .build()
                 )
-                .withReplicas(1)
+                .withReplicas(getDesiredInstances(cr))
                 .withSelector(new LabelSelectorBuilder()
                         .withMatchLabels(getPodSelectorLabels(cr))
                         .build()

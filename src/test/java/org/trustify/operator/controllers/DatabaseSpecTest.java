@@ -58,6 +58,8 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.DatabaseSpec(
                         true,
                         new TrustifySpec.ExternalDatabaseSpec(
@@ -105,6 +107,8 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
         // Create
         final Trustify trustify = generateTrustify("provided-database");
         trustify.setSpec(new TrustifySpec(
+                null,
+                null,
                 null,
                 null,
                 null,
