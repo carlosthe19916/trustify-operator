@@ -14,17 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Extract tag
-        id: extract_tag
-        run: |
-          tag=$(if [[ ${{github.ref_name}} == v* ]];then echo "${{github.ref_name}}"; else echo "latest"; fi)
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-    outputs:
-      tag: ${{ steps.extract_tag.outputs.tag }}
-
   operator-build:
     uses: trustification/release-tools/.github/workflows/build-push-images.yaml@main
     with:
@@ -36,63 +25,65 @@ jobs:
       registry_username: ${{ github.actor }}
       registry_password: ${{ secrets.GITHUB_TOKEN }}
 
-  bundle-build:
-    uses: trustification/release-tools/.github/workflows/build-push-images.yaml@main
-    needs:
-      - prepare
-      - operator-build
-    with:
-      registry: "ghcr.io"
-      image_name: "${{ github.repository_owner }}/trustify-operator-bundle"
-      containerfile: "./bundle.Dockerfile"
-      architectures: '[ "amd64" ]'
-      extra-args: '--build-arg QUARKUS_OPTS="-Dquarkus.container-image.image=ghcr.io/${{ github.repository_owner }}/trustify-operator:${{ needs.prepare.outputs.tag }}"'
-    secrets:
-      registry_username: ${{ github.actor }}
-      registry_password: ${{ secrets.GITHUB_TOKEN }}
-
-  catalog-build:
-    runs-on: ubuntu-latest
-    needs:
-      - prepare
-      - bundle-build
-    steps:
-      - name: Setup OLM CLIs
-        run: |
-          export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac)
-          export OS=$(uname | awk '{print tolower($0)}')
-
-          # Opm
-          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-registry/releases/download/v1.45.0
-          curl -LO ${OPERATOR_SDK_DL_URL}/${OS}-${ARCH}-opm
-          chmod +x ${OS}-${ARCH}-opm && sudo mv ${OS}-${ARCH}-opm /usr/local/bin/opm
-
-      - name: Create catalog
-        run: |
-          opm index add \
-            --bundles ghcr.io/${{ github.repository_owner }}/trustify-operator-bundle:$TAG \
-            --tag ${{ github.repository_owner }}/trustify-operator-catalog:$TAG \
-            --build-tool podman
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-
-      - name: Push To Registry
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ github.repository_owner }}/trustify-operator-catalog
-          tags: ${{ needs.prepare.outputs.tag }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          registry: "ghcr.io"
-
   keycloak-build:
     uses: trustification/release-tools/.github/workflows/build-push-images.yaml@main
     with:
       registry: "ghcr.io"
       image_name: "${{ github.repository_owner }}/trustify-keycloak"
       containerfile: "./kc.Dockerfile"
-      architectures: '[ "amd64" ]'
+      architectures: '[ "amd64", "arm64" ]'
       extra-args: "--ulimit nofile=4096:4096"
     secrets:
       registry_username: ${{ github.actor }}
       registry_password: ${{ secrets.GITHUB_TOKEN }}
+
+  bundle-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract env vars for main
+        shell: bash
+        run: |
+          branch=main
+          bundle_version=99.0.0-$branch-$(date +"%Y%m%d.%H%M%S")                    
+          quarkus_opts="-Dquarkus.container-image.image=ghcr.io/${{ github.repository_owner }}/trustify-operator:latest -Dquarkus.application.version=$bundle_version"
+          
+          echo "channels=$branch" >> $GITHUB_ENV
+          echo "bundle_image_tag=v$bundle_version" >> $GITHUB_ENV
+          echo "quarkus_opts=$quarkus_opts" >> $GITHUB_ENV
+        if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Extract env vars from tag
+        shell: bash
+        run: |
+          tag=$(echo ${GITHUB_REF#refs/tags/})                
+          quarkus_opts="-Dquarkus.container-image.image=ghcr.io/${{ github.repository_owner }}/trustify-operator:$tag"
+          
+          echo "channels=alpha" >> $GITHUB_ENV
+          echo "bundle_image_tag=$tag" >> $GITHUB_ENV          
+          echo "quarkus_opts=$quarkus_opts" >> $GITHUB_ENV
+        if: contains(github.ref, 'tags')
+      - name: Extract env vars from all other branches
+        shell: bash
+        run: |
+          branch=$(echo ${GITHUB_REF#refs/heads/})
+          bundle_version=99.0.0-$branch-$(date +"%Y%m%d.%H%M%S")              
+          quarkus_opts="-Dquarkus.container-image.image=ghcr.io/${{ github.repository_owner }}/trustify-operator:$branch -Dquarkus.application.version=$bundle_version"
+          
+          echo "channels=$branch" >> $GITHUB_ENV
+          echo "bundle_image_tag=v$bundle_version" >> $GITHUB_ENV
+          echo "quarkus_opts=$quarkus_opts" >> $GITHUB_ENV
+        if: contains(github.ref, 'refs/heads/main') == false && contains(github.ref, 'tags') == false
+
+      - name: Build bundle
+        uses: trustification/release-tools/.github/actions/build-push@main
+        with:
+          containerfile: "./bundle.Dockerfile"
+          architectures: "amd64"
+          image_registry: ghcr.io
+          image_namespace: ${{ github.repository_owner }}
+          image_name: trustify-operator-bundle
+          tags: ${{ env.bundle_image_tag }}
+          build-args: |
+            CHANNELS=${{ env.channels }}
+            QUARKUS_OPTS=${{ env.quarkus_opts }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
