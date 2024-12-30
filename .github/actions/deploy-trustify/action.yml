@@ -1,0 +1,57 @@
+name: Install Trustify operator
+description: |
+  Install Trustify Operator.
+inputs:
+  ui:
+    description: "image uri for trustify-ui server (ie. ghcr.io/<namespace>/<image-name>:<tag>)"
+    required: false
+    default: ""
+  server:
+    description: "image uri for trustify server (ie. ghcr.io/<namespace>/<image-name>:<tag>)"
+    required: false
+    default: ""
+  namespace:
+    description: "namespace where the operator is installed"
+    required: true
+  app-name:
+    description: "Name of the Trustify instance"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install JQ
+      shell: bash
+      run: |
+        sudo apt-get install jq
+    - name: Deploy
+      shell: bash
+      run: |
+        json='{
+          "apiVersion": "org.trustify/v1alpha1",
+          "kind": "Trustify",
+          "metadata": {
+            "name": "my-app"
+          },
+          "spec": {}
+        }'
+        
+        name="${{ inputs.app-name }}"
+        json=$(echo $json | jq --arg name $name '.metadata.name=$name')
+        
+        if [ -n "${{ inputs.ui }}" ]; then
+          image=$(docker inspect ${{ inputs.ui }} --format='{{index .RepoDigests 0}}')
+          json=$(echo $json | jq --arg image $image '.spec.uiImage=$image')
+        fi
+        
+        if [ -n "${{ inputs.server }}" ]; then
+          image=$(docker inspect ${{ inputs.server }} --format='{{index .RepoDigests 0}}')
+          json=$(echo $json | jq --arg image $image '.spec.serverImage=$image')
+        fi
+        
+        if [ -n "kubectl get trustify ${{ inputs.app-name }}" ]; then
+          kubectl patch trustify ${{ inputs.app-name }} --type=merge \
+          -n ${{ inputs.namespace }} \
+          -p "$json"
+        else
+          kubectl create -n ${{ inputs.namespace }} -f - <<< "$json"
+        fi        
