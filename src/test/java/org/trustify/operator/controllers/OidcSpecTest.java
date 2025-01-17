@@ -59,7 +59,7 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
-                    verifyServer(trustify);
+                    verifyTrustify(trustify);
                     verifyUI(trustify);
                     verifyIngress(trustify, true, false);
 
@@ -167,7 +167,7 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
-                    verifyServer(trustify);
+                    verifyTrustify(trustify);
                     verifyUI(trustify);
                     verifyIngress(trustify, false, true); // Can not test browser as external oidc does not have route/ingress
 
@@ -247,7 +247,7 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 .atMost(5, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
-                    verifyServer(trustify);
+                    verifyTrustify(trustify);
                     verifyUI(trustify);
                     verifyIngress(trustify, true, true);
 

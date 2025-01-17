@@ -52,7 +52,7 @@ public class HostnameSpecTest extends ReconcilerBaseTest {
                 .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
-                    verifyServer(trustify);
+                    verifyTrustify(trustify);
                     verifyUI(trustify);
                     verifyIngress(trustify, false, false);
 
