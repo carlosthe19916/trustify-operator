@@ -14,7 +14,7 @@ import org.trustify.operator.TrustifyImagesConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.service.ServerService;
-import org.trustify.operator.controllers.DeploymentConfigurator;
+import org.trustify.operator.controllers.ResourceConfigurator;
 import org.trustify.operator.services.KeycloakRealmService;
 import org.trustify.operator.services.KeycloakServerService;
 import org.trustify.operator.utils.CRDUtils;
@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 @ApplicationScoped
-public class UIDeploymentConfigurator implements DeploymentConfigurator {
+public class UIDeploymentConfigurator implements ResourceConfigurator {
 
     @Inject
     TrustifyImagesConfig trustifyImagesConfig;

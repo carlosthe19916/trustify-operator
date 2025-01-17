@@ -9,7 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.controllers.DeploymentConfigurator;
+import org.trustify.operator.controllers.ResourceConfigurator;
 
 import java.util.Map;
 
@@ -33,7 +33,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
-        DeploymentConfigurator.Config config = dbDeploymentConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = dbDeploymentConfigurator.configureDeployment(cr, context);
         boolean match = config.match(actual.getSpec().getTemplate().getSpec());
         return Result.nonComputed(match);
     }
@@ -50,7 +50,7 @@ public class DBDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     }
 
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        DeploymentConfigurator.Config config = dbDeploymentConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = dbDeploymentConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()

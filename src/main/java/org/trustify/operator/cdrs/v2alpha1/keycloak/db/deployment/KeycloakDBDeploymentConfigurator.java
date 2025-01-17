@@ -10,7 +10,7 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.pvc.KeycloakDBPersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.secret.KeycloakDBSecret;
-import org.trustify.operator.controllers.DeploymentConfigurator;
+import org.trustify.operator.controllers.ResourceConfigurator;
 import org.trustify.operator.utils.CRDUtils;
 
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class KeycloakDBDeploymentConfigurator implements DeploymentConfigurator {
+public class KeycloakDBDeploymentConfigurator implements ResourceConfigurator {
 
     @Inject
     TrustifyImagesConfig trustifyImagesConfig;

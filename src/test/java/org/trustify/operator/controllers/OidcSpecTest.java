@@ -37,12 +37,15 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.OidcSpec(
                         false,
                         false,
                         null,
                         null
                 ),
+                null,
                 null,
                 null,
                 null
@@ -138,6 +141,8 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.OidcSpec(
                         true,
                         true,
@@ -148,6 +153,7 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                         ),
                         null
                 ),
+                null,
                 null,
                 null,
                 null
@@ -219,12 +225,15 @@ public class OidcSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.OidcSpec(
                         true,
                         false,
                         null,
                         null
                 ),
+                null,
                 null,
                 null,
                 null

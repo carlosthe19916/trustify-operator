@@ -13,7 +13,7 @@ import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
-import org.trustify.operator.controllers.DeploymentConfigurator;
+import org.trustify.operator.controllers.ResourceConfigurator;
 
 import java.util.Map;
 import java.util.Optional;
@@ -44,7 +44,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
             return Result.nonComputed(false);
         }
 
-        DeploymentConfigurator.Config config = uiDeploymentConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = uiDeploymentConfigurator.configureDeployment(cr, context);
         boolean match = config.match(actual.getSpec().getTemplate().getSpec());
         return Result.nonComputed(match);
     }
@@ -86,7 +86,7 @@ public class UIDeployment extends CRUDKubernetesDependentResource<Deployment, Tr
     }
 
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        DeploymentConfigurator.Config config = uiDeploymentConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = uiDeploymentConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()
