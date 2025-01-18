@@ -30,6 +30,12 @@ public record TrustifySpec(
         @JsonPropertyDescription("Number of Server instances. Default is 1.")
         Integer serverInstances,
 
+        @JsonPropertyDescription("Number of Importer instances. Default is 1.")
+        Integer importerInstances,
+
+        @JsonPropertyDescription("Size of the PVC for each importer to use")
+        String importerWorkdirPvcSize,
+
         @JsonProperty("http")
         @JsonPropertyDescription("In this section you can configure features related to HTTP and HTTPS")
         HttpSpec httpSpec,
@@ -56,11 +62,18 @@ public record TrustifySpec(
 
         @JsonProperty("serverResources")
         @JsonPropertyDescription("In this section you can configure resource limits settings for the Server.")
-        ResourcesLimitSpec serverResourceLimitSpec
+        ResourcesLimitSpec serverResourceLimitSpec,
+
+        @JsonProperty("importerResources")
+        @JsonPropertyDescription("In this section you can configure resource limits settings for the Importer.")
+        ResourcesLimitSpec importerResourceLimitSpec
 ) {
 
     public TrustifySpec() {
         this(
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,

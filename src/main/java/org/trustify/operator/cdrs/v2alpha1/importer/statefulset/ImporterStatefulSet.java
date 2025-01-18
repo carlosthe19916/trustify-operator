@@ -1,4 +1,4 @@
-package org.trustify.operator.cdrs.v2alpha1.server.deployment;
+package org.trustify.operator.cdrs.v2alpha1.importer.statefulset;
 
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.*;
@@ -9,74 +9,104 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
+import org.trustify.operator.TrustifyConfig;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeploymentConfigurator;
 import org.trustify.operator.controllers.ResourceConfigurator;
 
 import java.util.Map;
 import java.util.Optional;
 
-@KubernetesDependent(labelSelector = ServerDeployment.LABEL_SELECTOR, resourceDiscriminator = ServerDeploymentDiscriminator.class)
+@KubernetesDependent(labelSelector = ImporterStatefulSet.LABEL_SELECTOR, resourceDiscriminator = ImporterStatefulSetDiscriminator.class)
 @ApplicationScoped
-public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment, Trustify>
-        implements Matcher<Deployment, Trustify> {
+public class ImporterStatefulSet extends CRUDKubernetesDependentResource<StatefulSet, Trustify>
+        implements Matcher<StatefulSet, Trustify> {
 
-    public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=server";
+    public static final String LABEL_SELECTOR = "app.kubernetes.io/managed-by=trustify-operator,component=importer";
 
     @Inject
-    ServerDeploymentConfigurator distConfigurator;
+    TrustifyConfig trustifyConfig;
 
-    public ServerDeployment() {
-        super(Deployment.class);
+    @Inject
+    ImporterStatefulSetConfigurator importerConfigurator;
+
+    public ImporterStatefulSet() {
+        super(StatefulSet.class);
     }
 
     @Override
-    protected Deployment desired(Trustify cr, Context<Trustify> context) {
-        return newDeployment(cr, context, distConfigurator);
+    protected StatefulSet desired(Trustify cr, Context<Trustify> context) {
+        return newStatefulSet(cr, context);
     }
 
     @Override
-    public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
+    public Result<StatefulSet> match(StatefulSet actual, Trustify cr, Context<Trustify> context) {
         boolean matchDesiredInstances = getDesiredInstances(cr) == actual.getSpec().getReplicas();
         if (!matchDesiredInstances) {
             return Result.nonComputed(false);
         }
 
-        ResourceConfigurator.Config config = distConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = importerConfigurator.configureDeployment(cr, context);
         boolean match = config.match(actual.getSpec().getTemplate().getSpec());
         return Result.nonComputed(match);
     }
 
     private int getDesiredInstances(Trustify cr) {
-        return Optional.ofNullable(cr.getSpec().serverInstances())
+        return Optional.ofNullable(cr.getSpec().importerInstances())
                 .orElse(1);
     }
 
-    private Deployment newDeployment(Trustify cr, Context<Trustify> context, ServerDeploymentConfigurator distConfigurator) {
-        return new DeploymentBuilder()
+    private StatefulSet newStatefulSet(Trustify cr, Context<Trustify> context) {
+        return new StatefulSetBuilder()
                 .withMetadata(Constants.metadataBuilder
-                        .apply(new Constants.Resource(getDeploymentName(cr), LABEL_SELECTOR, cr))
+                        .apply(new Constants.Resource(getStatefulSetName(cr), LABEL_SELECTOR, cr))
                         .withAnnotations(Map.of("app.openshift.io/connects-to", """
-                                [{"apiVersion": "apps/v1", "kind":"Deployment", "name": "%s"}]
+                                [{"apiVersion": "apps/v1", "kind":"StatefulSet", "name": "%s"}]
                                 """.formatted(DBDeployment.getDeploymentName(cr))
                         ))
                         .build()
                 )
-                .withSpec(getDeploymentSpec(cr, context, distConfigurator))
+                .withSpec(getStatefulSetSpec(cr, context))
                 .build();
     }
 
-    private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context, ServerDeploymentConfigurator distConfigurator) {
-        ServerDeploymentConfigurator.Config config = distConfigurator.configureDeployment(cr, context);
+    private StatefulSetSpec getStatefulSetSpec(Trustify cr, Context<Trustify> context) {
+        ServerDeploymentConfigurator.Config config = importerConfigurator.configureDeployment(cr, context);
 
-        return new DeploymentSpecBuilder()
-                .withStrategy(new DeploymentStrategyBuilder()
-                        .withType("Recreate")
+        String pvcStorageSize = Optional.ofNullable(cr.getSpec().importerWorkdirPvcSize())
+                .orElse(trustifyConfig.defaultPvcSize());
+
+        String persistentVolumeClaimName = "workdir";
+
+        var volumeMount = new VolumeMountBuilder()
+                .withName(persistentVolumeClaimName)
+                .withMountPath("/data/workdir")
+                .build();
+
+        return new StatefulSetSpecBuilder()
+                .withUpdateStrategy(new StatefulSetUpdateStrategyBuilder()
+                        .withType("RollingUpdate")
                         .build()
                 )
                 .withReplicas(getDesiredInstances(cr))
                 .withSelector(new LabelSelectorBuilder()
                         .withMatchLabels(getPodSelectorLabels(cr))
+                        .build()
+                )
+                .withVolumeClaimTemplates(new PersistentVolumeClaimBuilder()
+                        .withMetadata(new ObjectMetaBuilder()
+                                .withName(persistentVolumeClaimName)
+                                .build()
+                        )
+                        .withSpec(new PersistentVolumeClaimSpecBuilder()
+                                .withAccessModes("ReadWriteOnce")
+                                .withResources(new VolumeResourceRequirementsBuilder()
+                                        .withRequests(Map.of("storage", new Quantity(pvcStorageSize)))
+                                        .build()
+                                )
+                                .build()
+                        )
                         .build()
                 )
                 .withTemplate(new PodTemplateSpecBuilder()
@@ -87,44 +117,28 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                 .withRestartPolicy("Always")
                                 .withTerminationGracePeriodSeconds(70L)
                                 .withImagePullSecrets(cr.getSpec().imagePullSecrets())
-                                .withInitContainers(new ContainerBuilder()
-                                        .withName("migrate")
-                                        .withImage(config.image())
-                                        .withImagePullPolicy(config.imagePullPolicy())
-                                        .withEnv(config.allEnvVars())
-                                        .withCommand("/usr/local/bin/trustd")
-                                        .withArgs(
-                                                "db",
-                                                "migrate"
-                                        )
-                                        .build()
-                                )
                                 .withContainers(new ContainerBuilder()
-                                        .withName(Constants.TRUSTI_SERVER_NAME)
+                                        .withName("importer")
                                         .withImage(config.image())
                                         .withImagePullPolicy(config.imagePullPolicy())
                                         .withEnv(config.allEnvVars())
                                         .withCommand("/usr/local/bin/trustd")
                                         .withArgs(
-                                                "api",
-                                                "--sample-data"
+                                                "importer",
+                                                "--working-dir",
+                                                volumeMount.getMountPath()
                                         )
                                         .withPorts(
                                                 new ContainerPortBuilder()
-                                                        .withName("http")
-                                                        .withProtocol("TCP")
-                                                        .withContainerPort(getDeploymentPort(cr))
-                                                        .build(),
-                                                new ContainerPortBuilder()
                                                         .withName("http-infra")
                                                         .withProtocol("TCP")
-                                                        .withContainerPort(getDeploymentInfrastructurePort(cr))
+                                                        .withContainerPort(getStatefulSetInfrastructurePort(cr))
                                                         .build()
                                         )
                                         .withLivenessProbe(new ProbeBuilder()
                                                 .withHttpGet(new HTTPGetActionBuilder()
                                                         .withPath("/health/live")
-                                                        .withNewPort(getDeploymentInfrastructurePort(cr))
+                                                        .withNewPort(getStatefulSetInfrastructurePort(cr))
                                                         .withScheme("HTTP")
                                                         .build()
                                                 )
@@ -138,7 +152,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                         .withReadinessProbe(new ProbeBuilder()
                                                 .withHttpGet(new HTTPGetActionBuilder()
                                                         .withPath("health/ready")
-                                                        .withNewPort(getDeploymentInfrastructurePort(cr))
+                                                        .withNewPort(getStatefulSetInfrastructurePort(cr))
                                                         .withScheme("HTTP")
                                                         .build()
                                                 )
@@ -152,7 +166,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                         .withStartupProbe(new ProbeBuilder()
                                                 .withHttpGet(new HTTPGetActionBuilder()
                                                         .withPath("/health/startup")
-                                                        .withNewPort(getDeploymentInfrastructurePort(cr))
+                                                        .withNewPort(getStatefulSetInfrastructurePort(cr))
                                                         .withScheme("HTTP")
                                                         .build()
                                                 )
@@ -164,6 +178,7 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                                                 .build()
                                         )
                                         .withVolumeMounts(config.allVolumeMounts())
+                                        .addToVolumeMounts(volumeMount)
                                         .withResources(config.resourceRequirements())
                                         .build()
                                 )
@@ -175,22 +190,17 @@ public class ServerDeployment extends CRUDKubernetesDependentResource<Deployment
                 .build();
     }
 
-    public static String getDeploymentName(Trustify cr) {
-        return cr.getMetadata().getName() + Constants.SERVER_DEPLOYMENT_SUFFIX;
+    public static String getStatefulSetName(Trustify cr) {
+        return cr.getMetadata().getName() + Constants.IMPORTER_STATEFUL_SET_SUFFIX;
     }
 
-    public static int getDeploymentPort(Trustify cr) {
-        return 8080;
-    }
-
-    public static int getDeploymentInfrastructurePort(Trustify cr) {
+    public static int getStatefulSetInfrastructurePort(Trustify cr) {
         return 9010;
     }
 
-
     public static Map<String, String> getPodSelectorLabels(Trustify cr) {
         return Map.of(
-                "trustify-operator/group", "server"
+                "trustify-operator/group", "importer"
         );
     }
 }

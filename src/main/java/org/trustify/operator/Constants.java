@@ -43,6 +43,7 @@ public class Constants {
     public static final String TRUSTI_NAME = "trustify";
     public static final String TRUSTI_UI_NAME = "trustify-ui";
     public static final String TRUSTI_SERVER_NAME = "trustify-server";
+    public static final String TRUSTI_IMPORTER_NAME = "trustify-importer";
     public static final String TRUSTI_DB_NAME = "trustify-db";
 
     public static final String KEYCLOAK_NAME = "keycloak";
@@ -64,6 +65,8 @@ public class Constants {
     public static final String SERVER_PVC_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-pvc";
     public static final String SERVER_DEPLOYMENT_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-deployment";
     public static final String SERVER_SERVICE_SUFFIX = "-" + TRUSTI_SERVER_NAME + "-service";
+
+    public static final String IMPORTER_STATEFUL_SET_SUFFIX = "-" + TRUSTI_IMPORTER_NAME + "-statefulset";
 
     public static final String OIDC_DB_PVC_SUFFIX = "-" + KEYCLOAK_DB_NAME + "-pvc";
     public static final String OIDC_DB_SECRET_SUFFIX = "-" + KEYCLOAK_DB_NAME + "-secret";

@@ -9,7 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
-import org.trustify.operator.controllers.DeploymentConfigurator;
+import org.trustify.operator.controllers.ResourceConfigurator;
 import org.trustify.operator.services.KeycloakServerService;
 
 import java.util.Map;
@@ -34,7 +34,7 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
 
     @Override
     public Result<Deployment> match(Deployment actual, Trustify cr, Context<Trustify> context) {
-        DeploymentConfigurator.Config config = keycloakDBDeploymentConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = keycloakDBDeploymentConfigurator.configureDeployment(cr, context);
         boolean match = config.match(actual.getSpec().getTemplate().getSpec());
         return Result.nonComputed(match);
     }
@@ -55,7 +55,7 @@ public class KeycloakDBDeployment extends CRUDKubernetesDependentResource<Deploy
     }
 
     private DeploymentSpec getDeploymentSpec(Trustify cr, Context<Trustify> context) {
-        DeploymentConfigurator.Config config = keycloakDBDeploymentConfigurator.configureDeployment(cr, context);
+        ResourceConfigurator.Config config = keycloakDBDeploymentConfigurator.configureDeployment(cr, context);
 
         return new DeploymentSpecBuilder()
                 .withStrategy(new DeploymentStrategyBuilder()

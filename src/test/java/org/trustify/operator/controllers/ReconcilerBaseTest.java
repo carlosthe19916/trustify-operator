@@ -4,8 +4,6 @@ import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
-import io.fabric8.kubernetes.api.model.networking.v1.IngressLoadBalancerIngress;
-import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ListVisitFromServerGetDeleteRecreateWaitApplicable;
 import io.github.bonigarcia.wdm.WebDriverManager;
@@ -26,6 +24,7 @@ import org.openqa.selenium.devtools.v85.fetch.Fetch;
 import org.openqa.selenium.devtools.v85.fetch.model.RequestId;
 import org.openqa.selenium.devtools.v85.network.Network;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
+import org.trustify.operator.cdrs.v2alpha1.importer.statefulset.ImporterStatefulSet;
 import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngress;
 import org.trustify.operator.cdrs.v2alpha1.server.db.deployment.DBDeployment;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
@@ -211,6 +210,14 @@ public abstract class ReconcilerBaseTest {
         MatcherAssert.assertThat("DB service port not valid", dbPort, Matchers.is(5432));
     }
 
+    protected void verifyTrustify(Trustify cr) {
+        // Verify server
+        verifyServer(cr);
+
+        // Verify importer
+        verifyImporter(cr);
+    }
+
     protected void verifyServer(Trustify cr) {
         // Server Deployment
         final var serverDeployment = client.apps()
@@ -244,6 +251,25 @@ public abstract class ReconcilerBaseTest {
                 .map(ServicePort::getPort)
                 .toList();
         Assertions.assertTrue(serverServicePorts.contains(8080), "Server service port not valid");
+    }
+
+    protected void verifyImporter(Trustify cr) {
+        // Server Deployment
+        final var statefulSet = client.apps()
+                .statefulSets()
+                .inNamespace(cr.getMetadata().getNamespace())
+                .withName(ImporterStatefulSet.getStatefulSetName(cr))
+                .get();
+        final var serverContainer = statefulSet.getSpec()
+                .getTemplate()
+                .getSpec()
+                .getContainers()
+                .stream()
+                .findFirst();
+        MatcherAssert.assertThat("Server container not found", serverContainer.isPresent(), Matchers.is(true));
+        MatcherAssert.assertThat("Server container image not valid", serverContainer.get().getImage(), Matchers.is(serverImage));
+
+        Assertions.assertEquals(1, statefulSet.getStatus().getAvailableReplicas(), "Expected Server deployment number of replicas doesn't match");
     }
 
     protected void verifyUI(Trustify cr) {

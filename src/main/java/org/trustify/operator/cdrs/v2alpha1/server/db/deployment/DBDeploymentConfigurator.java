@@ -10,7 +10,7 @@ import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifySpec;
 import org.trustify.operator.cdrs.v2alpha1.server.db.pvc.DBPersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecret;
-import org.trustify.operator.controllers.DeploymentConfigurator;
+import org.trustify.operator.controllers.ResourceConfigurator;
 import org.trustify.operator.utils.CRDUtils;
 
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class DBDeploymentConfigurator implements DeploymentConfigurator {
+public class DBDeploymentConfigurator implements ResourceConfigurator {
 
     @Inject
     TrustifyImagesConfig trustifyImagesConfig;

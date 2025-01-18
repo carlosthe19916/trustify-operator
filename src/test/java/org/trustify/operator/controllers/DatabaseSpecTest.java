@@ -60,6 +60,8 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.DatabaseSpec(
                         true,
                         new TrustifySpec.ExternalDatabaseSpec(
@@ -74,6 +76,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                         ),
                         null
                 ),
+                null,
                 null,
                 null,
                 null,
@@ -96,7 +99,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                             .get();
                     Assertions.assertNull(dbDeployment, "DB should not be created as an external one is used");
 
-                    verifyServer(trustify);
+                    verifyTrustify(trustify);
                     verifyUI(trustify);
                     verifyIngress(trustify, true, false);
                 });
@@ -115,11 +118,14 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new TrustifySpec.DatabaseSpec(
                         false,
                         null,
                         null
                 ),
+                null,
                 null,
                 null,
                 null,
@@ -135,7 +141,7 @@ public class DatabaseSpecTest extends ReconcilerBaseTest {
                 .atMost(3, TimeUnit.MINUTES)
                 .untilAsserted(() -> {
                     verifyDatabase(trustify);
-                    verifyServer(trustify);
+                    verifyTrustify(trustify);
                     verifyUI(trustify);
                     verifyIngress(trustify, true, false);
                 });

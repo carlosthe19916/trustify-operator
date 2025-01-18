@@ -5,6 +5,7 @@ import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.javaoperatorsdk.operator.api.config.informer.InformerConfiguration;
 import io.javaoperatorsdk.operator.api.reconciler.*;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.Dependent;
@@ -17,6 +18,9 @@ import org.keycloak.k8s.v2alpha1.KeycloakRealmImport;
 import org.trustify.operator.Constants;
 import org.trustify.operator.cdrs.v2alpha1.Trustify;
 import org.trustify.operator.cdrs.v2alpha1.TrustifyStatusCondition;
+import org.trustify.operator.cdrs.v2alpha1.importer.statefulset.ImporterStatefulSet;
+import org.trustify.operator.cdrs.v2alpha1.importer.statefulset.ImporterStatefulSetReadyPostCondition;
+import org.trustify.operator.cdrs.v2alpha1.importer.statefulset.ImporterStatefulSetReconcilePreCondition;
 import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngress;
 import org.trustify.operator.cdrs.v2alpha1.ingress.AppIngressReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.keycloak.db.deployment.KeycloakDBDeployment;
@@ -41,6 +45,7 @@ import org.trustify.operator.cdrs.v2alpha1.server.db.secret.DBSecretActivationCo
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBService;
 import org.trustify.operator.cdrs.v2alpha1.server.db.service.DBServiceActivationCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeployment;
+import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeploymentReadyPostCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.deployment.ServerDeploymentReconcilePreCondition;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaim;
 import org.trustify.operator.cdrs.v2alpha1.server.pvc.ServerStoragePersistentVolumeClaimActivationCondition;
@@ -127,12 +132,19 @@ import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT
                         type = ServerDeployment.class,
                         dependsOn = {"server-configmap", "server-service"},
                         reconcilePrecondition = ServerDeploymentReconcilePreCondition.class,
-                        readyPostcondition = ServerDeployment.class
+                        readyPostcondition = ServerDeploymentReadyPostCondition.class
                 ),
                 @Dependent(
                         name = "server-service",
                         type = ServerService.class,
                         readyPostcondition = ServerServiceReadyPostCondition.class
+                ),
+
+                @Dependent(
+                        name = "importer-stateful-set",
+                        type = ImporterStatefulSet.class,
+                        reconcilePrecondition = ImporterStatefulSetReconcilePreCondition.class,
+                        readyPostcondition = ImporterStatefulSetReadyPostCondition.class
                 ),
 
                 @Dependent(
@@ -162,6 +174,7 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
     public static final String SECRET_EVENT_SOURCE = "secretSource";
     public static final String DEPLOYMENT_EVENT_SOURCE = "deploymentSource";
     public static final String SERVICE_EVENT_SOURCE = "serviceSource";
+    public static final String STATEFUL_SET_EVENT_SOURCE = "statefulSetSource";
 
     @Inject
     ClusterService clusterService;
@@ -310,19 +323,22 @@ public class TrustifyReconciler implements Reconciler<Trustify>, Cleaner<Trustif
         var secretInformerConfiguration = InformerConfiguration.from(Secret.class, context).build();
         var deploymentInformerConfiguration = InformerConfiguration.from(Deployment.class, context).build();
         var serviceInformerConfiguration = InformerConfiguration.from(Service.class, context).build();
+        var statefulSetInformerConfiguration = InformerConfiguration.from(StatefulSet.class, context).build();
 
         var configMapInformerConfigurationInformerEventSource = new InformerEventSource<>(configMapInformerConfiguration, context);
         var pcvInformerEventSource = new InformerEventSource<>(pcvInformerConfiguration, context);
         var secretInformerEventSource = new InformerEventSource<>(secretInformerConfiguration, context);
         var deploymentInformerEventSource = new InformerEventSource<>(deploymentInformerConfiguration, context);
         var serviceInformerEventSource = new InformerEventSource<>(serviceInformerConfiguration, context);
+        var statefulSetInformerEventSource = new InformerEventSource<>(statefulSetInformerConfiguration, context);
 
         return Map.of(
                 CONFIG_MAP_EVENT_SOURCE, configMapInformerConfigurationInformerEventSource,
                 PVC_EVENT_SOURCE, pcvInformerEventSource,
                 SECRET_EVENT_SOURCE, secretInformerEventSource,
                 DEPLOYMENT_EVENT_SOURCE, deploymentInformerEventSource,
-                SERVICE_EVENT_SOURCE, serviceInformerEventSource
+                SERVICE_EVENT_SOURCE, serviceInformerEventSource,
+                STATEFUL_SET_EVENT_SOURCE, statefulSetInformerEventSource
         );
     }
 }
