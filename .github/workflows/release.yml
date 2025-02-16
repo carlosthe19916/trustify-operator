@@ -83,7 +83,7 @@ jobs:
         run: tar -czvf jreleaser-log.tgz out/
       - name: JReleaser - upload log
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jreleaser-log
           path: 'jreleaser-log.tgz'
@@ -165,7 +165,7 @@ jobs:
           git diff
 
       - name: Create Pull Request - Community Operators
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         id: co-cpr
         with:
           token: ${{ secrets.GH_PAT }}
@@ -180,7 +180,7 @@ jobs:
 #          body-path: ./changelog.md
 
       - name: Create Pull Request - Red Hat Community Operators
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         id: rhco-cpr
         with:
           token: ${{ secrets.GH_PAT }}

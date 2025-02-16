@@ -38,7 +38,7 @@ spec:
             fieldRef:
               fieldPath: "metadata.namespace"
         - name: "RELATED_IMAGE_KEYCLOAK"
-          value: "ghcr.io/carlosthe19916/trustify-keycloak:latest"
+          value: "ghcr.io/trustification/trustify-keycloak:latest"
         - name: "RELATED_IMAGE_SERVER"
           value: "ghcr.io/trustification/trustd:latest"
         - name: "RELATED_IMAGE_UI"

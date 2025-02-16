@@ -125,6 +125,29 @@ spec:
                       type: "string"
                   type: "object"
                 type: "array"
+              importerInstances:
+                description: "Number of Importer instances. Default is 1."
+                type: "integer"
+              importerResources:
+                description: "In this section you can configure resource limits settings\
+                  \ for the Importer."
+                properties:
+                  cpuLimit:
+                    description: "Limit CPU."
+                    type: "string"
+                  cpuRequest:
+                    description: "Requested CPU."
+                    type: "string"
+                  memoryLimit:
+                    description: "Limit Memory."
+                    type: "string"
+                  memoryRequest:
+                    description: "Requested memory."
+                    type: "string"
+                type: "object"
+              importerWorkdirPvcSize:
+                description: "Size of the PVC for each importer to use"
+                type: "string"
               oidc:
                 description: "In this section you can configure Oidc settings."
                 properties:
@@ -229,6 +252,9 @@ spec:
                 description: "Custom Trustify Server image to be used. For internal\
                   \ use only"
                 type: "string"
+              serverInstances:
+                description: "Number of Server instances. Default is 1."
+                type: "integer"
               serverResources:
                 description: "In this section you can configure resource limits settings\
                   \ for the Server."
@@ -287,6 +313,9 @@ spec:
                 description: "Custom Trustify UI image to be used. For internal use\
                   \ only"
                 type: "string"
+              uiInstances:
+                description: "Number of UI instances. Default is 1."
+                type: "integer"
               uiResources:
                 description: "In this section you can configure resource limits settings\
                   \ for the UI."

@@ -3,12 +3,12 @@ name: CI
 on:
   push:
     branches:
-      - main
-      - "release-*"
+      - "main"
+      - "release/*"
   pull_request:
     branches:
-      - main
-      - "release-*"
+      - "main"
+      - "release/*"
 
 concurrency:
   group: trustify-operator-ci-${{ github.ref }}
@@ -71,7 +71,7 @@ jobs:
           make start-kind
       - name: Install OLM
         run: |
-          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.22.0/install.sh | bash -s v0.30.0
+          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.30.0/install.sh | bash -s v0.30.0
       - name: Test
         env:
           KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
@@ -96,7 +96,7 @@ jobs:
           cpus: "max"
       - name: Install OLM
         run: |
-          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.22.0/install.sh | bash -s v0.30.0
+          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.30.0/install.sh | bash -s v0.30.0
       - name: Test
         env:
           KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
